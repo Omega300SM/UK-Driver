@@ -7,44 +7,12 @@
  * on the left, the left-hand side when heading east is −z.
  */
 
-export interface Rect {
-  x0: number;
-  x1: number;
-  z0: number;
-  z1: number;
-}
+import { inRect, markerAt, speedLimitAt, type Obstacle, type SceneLayout } from '../layout';
 
-export interface Marker extends Rect {
-  id: string;
-  label: string;
-}
+export type { Rect, Marker, SpeedZone, Obstacle, SceneLayout } from '../layout';
+export { inRect, markerAt, speedLimitAt };
 
-export interface SpeedZone extends Rect {
-  mph: number;
-  name: string;
-}
-
-export interface Obstacle extends Rect {
-  kind: 'car' | 'shelter' | 'gate' | 'bollard';
-  color?: number;
-}
-
-export interface SceneLayout {
-  name: string;
-  /** Areas where tyres can go. Anything outside is kerb. */
-  drivable: Rect[];
-  /** Pavements (raised; drawn and treated as kerb). */
-  pavements: Rect[];
-  obstacles: Obstacle[];
-  markers: Marker[];
-  speedZones: SpeedZone[];
-  /** Road sections with a centre line; used for keep-left checks. */
-  lanes: Array<Rect & { axis: 'x'; centre: number }>;
-  start: { x: number; z: number; heading: number };
-  bays: Array<{ x: number; z: number; w: number; d: number }>;
-}
-
-const CAR_COLOURS = [0x2e5c8a, 0xb8352f, 0xe8e4da, 0x3c3f44, 0x6b8f3a, 0xd9a22e, 0x7a4f9a, 0x9aa3ab];
+export const CAR_COLOURS = [0x2e5c8a, 0xb8352f, 0xe8e4da, 0x3c3f44, 0x6b8f3a, 0xd9a22e, 0x7a4f9a, 0x9aa3ab];
 
 function bays(): SceneLayout['bays'] {
   const out: SceneLayout['bays'] = [];
@@ -104,17 +72,3 @@ export const CAR_PARK: SceneLayout = {
   start: { x: -34, z: -7.6, heading: Math.PI / 2 },
   bays: allBays
 };
-
-export function inRect(r: Rect, x: number, z: number): boolean {
-  return x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
-}
-
-export function speedLimitAt(layout: SceneLayout, x: number, z: number): number {
-  for (const zone of layout.speedZones) if (inRect(zone, x, z)) return zone.mph;
-  return 30;
-}
-
-export function markerAt(layout: SceneLayout, x: number, z: number): string | null {
-  for (const m of layout.markers) if (inRect(m, x, z)) return m.id;
-  return null;
-}

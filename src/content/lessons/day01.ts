@@ -12,6 +12,7 @@ export const day01: LessonContent = {
   title: 'Cockpit drill and controls',
   subtitle: 'Little Ashby Leisure Centre car park, Sunday 8am',
   sceneId: 'carPark',
+  checks: 'carPark',
   rules: [97, 99, 103, 159, 160, 161, 239],
   badge: 'belt-up',
 
@@ -79,7 +80,13 @@ export const day01: LessonContent = {
       { say: 'Back into P for Park.', await: 'gear.P', highlight: 'gear' },
       { say: 'And cancel that signal.', await: 'signal.off', highlight: 'stalk' }
     ],
-    outro: 'Lovely! That’s moving off and stopping. Honestly, that’s the bones of all driving.'
+    outro: 'Lovely! That’s moving off and stopping. Honestly, that’s the bones of all driving.',
+    parked: true,
+    hint: [
+      [-30, -7.2],
+      [-14, -6.2],
+      [6, -7]
+    ]
   },
 
   free: {
@@ -98,12 +105,20 @@ export const day01: LessonContent = {
     intro:
       'Right, this is your test drive. I’ll mark it like a real examiner. The car is in Park, handbrake on. Get yourself ready, and when it’s safe, move off and follow the car park round to the exit.',
     directions: [
-      { atX: 16, say: 'At the end, carry straight on out onto Church Lane. It’s a twenty limit, so keep it gentle, and keep to the left.' },
-      { atX: 72, say: 'Pull up on the left just by the post box, please, when it’s safe.' }
+      { at: { x0: 16, x1: 200, z0: -40, z1: 40 }, say: 'At the end, carry straight on out onto Church Lane. It’s a twenty limit, so keep it gentle, and keep to the left.' },
+      { at: { x0: 72, x1: 200, z0: -40, z1: 40 }, say: 'Pull up on the left just by the post box, please, when it’s safe.', marker: 'B' }
     ],
     finishMarker: 'B',
     finishSay: 'And secure the car for me: handbrake on and into Park.',
-    timeLimitS: 300
+    timeLimitS: 300,
+    parked: true,
+    hint: [
+      [-30, -7.2],
+      [0, -6.5],
+      [22, -3],
+      [40, -2.6],
+      [104, -2.8]
+    ]
   },
 
   quiz: [

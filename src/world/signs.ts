@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { signAspect, signSvg, type SignSpec } from './signSvg';
 
 /**
  * Original procedural road signs drawn on small canvases. They follow UK
@@ -88,4 +89,41 @@ export function speedRoundelSvg(mph: number, size = 56): string {
   return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" aria-label="${mph} miles per hour limit" role="img">
   <circle cx="50" cy="50" r="48" fill="#d4202b"/><circle cx="50" cy="50" r="37" fill="#fff"/>
   <text x="50" y="52" font-family="Arial Narrow, Arial, sans-serif" font-weight="700" font-size="40" text-anchor="middle" dominant-baseline="middle" fill="#111">${mph}</text></svg>`;
+}
+
+/**
+ * Texture for any procedural sign. The SVG is rasterised asynchronously
+ * (Safari can draw SVG images into a canvas); the texture updates when ready.
+ * `back` gives a plain grey silhouette for the rear of the sign.
+ */
+export function signTexture(spec: SignSpec, back = false): THREE.Texture {
+  const key = `svg-${spec.kind}-${spec.value ?? ''}-${spec.text ?? ''}-${back}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const ar = signAspect(spec.kind);
+  const h = spec.kind === 'name' ? 96 : 192;
+  const w = Math.round(h * ar);
+  const cv = document.createElement('canvas');
+  cv.width = w;
+  cv.height = h;
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 2;
+  cache.set(key, tex);
+  const img = new Image();
+  img.onload = () => {
+    const c = cv.getContext('2d');
+    if (!c) return;
+    c.clearRect(0, 0, w, h);
+    c.drawImage(img, 0, 0, w, h);
+    if (back) {
+      c.globalCompositeOperation = 'source-in';
+      c.fillStyle = '#8d959c';
+      c.fillRect(0, 0, w, h);
+      c.globalCompositeOperation = 'source-over';
+    }
+    tex.needsUpdate = true;
+  };
+  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(signSvg(spec, h))}`;
+  return tex;
 }
