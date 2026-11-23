@@ -7,6 +7,8 @@ export interface PlayerCarMesh {
   wheels: THREE.Mesh[];
   frontWheels: THREE.Object3D[];
   indicators: { left: THREE.Mesh[]; right: THREE.Mesh[] };
+  /** Roof, pillars and roof sign: hidden in the driver's-seat camera. */
+  upper: THREE.Object3D[];
   brakeLights: THREE.Mesh[];
   headlights: THREE.Mesh[];
 }
@@ -37,6 +39,7 @@ export function buildPlayerCar(): PlayerCarMesh {
   const roof = new THREE.Mesh(new THREE.BoxGeometry(1.64, 0.06, 2.0), paint);
   roof.position.set(0, 1.5, -0.3);
   g.add(roof);
+  const upper: THREE.Object3D[] = [cabin, roof];
   // Pillars.
   for (const [x, z] of [
     [0.78, 0.82],
@@ -47,6 +50,7 @@ export function buildPlayerCar(): PlayerCarMesh {
     const p = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.62, 0.09), paint);
     p.position.set(x, 1.19, z);
     g.add(p);
+    upper.push(p);
   }
 
   // Roof sign (fictional driving school).
@@ -54,6 +58,7 @@ export function buildPlayerCar(): PlayerCarMesh {
   const sign = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.22, 0.12), signMat);
   sign.position.set(0, 1.65, -0.3);
   g.add(sign);
+  upper.push(sign);
 
   // L plates front and back.
   const lMat = new THREE.MeshBasicMaterial({ map: lPlate() });
@@ -109,7 +114,7 @@ export function buildPlayerCar(): PlayerCarMesh {
   shadow.position.y = 0.02;
   g.add(shadow);
 
-  return { group: g, wheels, frontWheels, indicators, brakeLights, headlights };
+  return { group: g, wheels, frontWheels, indicators, brakeLights, headlights, upper };
 }
 
 export function setLamp(meshes: THREE.Mesh[], on: boolean, onColor: number, offColor: number): void {

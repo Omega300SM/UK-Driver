@@ -617,7 +617,9 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
       tmpL.set(tmpV.x + Math.sin(yaw) * 10, 1.0, tmpV.z + Math.cos(yaw) * 10);
       cam.position.copy(tmpV);
       cam.lookAt(tmpL);
+      for (const o of carMesh.upper) o.visible = false;
     } else {
+      for (const o of carMesh.upper) o.visible = true;
       tmpV.set(car.x - fx * 7.2, 3.1, car.z - fz * 7.2);
       cam.position.lerp(tmpV, 0.2);
       tmpL.set(car.x + fx * 5, 0.9, car.z + fz * 5);
@@ -638,8 +640,8 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
         mirrorCam.lookAt(car.x - fx * 25, 1.0, car.z - fz * 25);
       } else {
         const side = mirrorWhich === 'right' ? 1 : -1;
-        mirrorCam.position.set(car.x + rx * side * 1.05 + fx * 0.8, 1.05, car.z + rz * side * 1.05 + fz * 0.8);
-        mirrorCam.lookAt(car.x + rx * side * 3.5 - fx * 25, 0.9, car.z + rz * side * 3.5 - fz * 25);
+        mirrorCam.position.set(car.x + rx * side * 1.25 + fx * 0.8, 1.05, car.z + rz * side * 1.25 + fz * 0.8);
+        mirrorCam.lookAt(car.x + rx * side * 7 - fx * 25, 0.9, car.z + rz * side * 7 - fz * 25);
       }
       insetView = { camera: mirrorCam, rect: { x, y, w, h: hgt } };
       inset.classList.add('show');
