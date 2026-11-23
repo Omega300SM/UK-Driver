@@ -5,14 +5,18 @@ import { app, setSetting } from '../state';
 import { goHome, next } from '../nav';
 import { stageLabel, toast } from './common';
 import { Renderer } from '../../engine/renderer';
-import { buildCarPark } from '../../world/scenes/carPark';
-import { inRect, markerAt, speedLimitAt } from '../../world/scenes/carParkLayout';
+import { buildScene } from '../../world/scenes';
+import { inRect, speedLimitAt, wrongSideBy as wrongSideAt, laneAt, junctionBoxAt, grow, type Rect } from '../../world/layout';
 import { buildPlayerCar, setLamp } from '../../world/playerCar';
 import { speedRoundelSvg } from '../../world/signs';
+import { signSvg } from '../../world/signSvg';
 import { Car } from '../../sim/car';
 import { Autopilot, type Waypoint } from '../../sim/autopilot';
 import { RulesEngine } from '../../rules/RulesEngine';
 import { day1Checks, angleDiff } from '../../rules/checks';
+import { townChecks } from '../../rules/checks/town';
+import { Traffic } from '../../sim/traffic';
+import { instanced, baseBox, lambert } from '../../world/props';
 import { Recorder } from '../../rules/recorder';
 import { mph, type DriveEvent, type Fault, type Gear, type MirrorId, type Side, type SignalState } from '../../rules/types';
 import { SpeechBubble } from '../../instructor/bubble';
@@ -20,30 +24,26 @@ import { SteeringWheel, Pedal } from '../../ui/hud/wheel';
 import { sfx, engineStart, engineStop, engineUpdate } from '../../platform/audio';
 import { isStandalone } from '../../platform/ios';
 import { requestMotionPermission, startTilt, stopTilt, tilt } from '../../platform/motion';
-import type { GuidedStep, Trigger } from '../../content/schema';
+import type { DriveSetup, GuidedStep, Trigger } from '../../content/schema';
 
 type DriveMode = Extract<Stage, 'guided' | 'free' | 'test'>;
 
-const HINT_PATHS: Record<DriveMode, Array<[number, number]>> = {
-  guided: [
-    [-30, -7.2],
-    [-14, -6.2],
-    [6, -7]
-  ],
-  free: [],
-  test: [
-    [-30, -7.2],
-    [0, -6.5],
-    [22, -3],
-    [40, -2.6],
-    [104, -2.8]
-  ]
-};
+/** A step for the scripted driver used by e2e tests and screenshots. */
+export type ScriptStep =
+  | { act: 'belt' | 'handbrake' | 'mirror' | 'look' | 'signal' | 'gear'; arg?: string }
+  | { brake: boolean }
+  | { wait: number }
+  | { drive: Array<[number, number, number]> }
+  | { waitGap: Array<[number, number]>; secs?: number }
+  | { waitFinishAsked: true }
+  | { moveOff: 'left' | 'right' };
 
 /** The driving screen used for guided, free and test drives. */
 export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
   const lesson = s.lesson;
   const settings = app.save.settings;
+  const setup: DriveSetup = (mode === 'guided' ? lesson.guided : mode === 'free' ? lesson.free : lesson.test) ?? {};
+  const town = lesson.checks === 'town';
 
   // ---------- DOM ----------
   const canvas = h('canvas', { class: 'gl', 'aria-label': 'Road view. Swipe left or right to look over your shoulder.' }) as HTMLCanvasElement;
@@ -109,7 +109,8 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     topLeft.append(
       btn({ class: 'hud-btn', 'data-testid': 'hint', 'aria-label': 'Hint' }, h('span', {}, '💡', h('span', { class: 'lbl-long' }, ' Hint')), () => {
         sfx.tap();
-        bubble.say(lesson.free.hints[hi++ % lesson.free.hints.length], 'happy', settings.voice);
+        const hints = lesson.free?.hints ?? [];
+        if (hints.length) bubble.say(hints[hi++ % hints.length], 'happy', settings.voice);
       })
     );
   }
@@ -125,24 +126,64 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
 
   // ---------- World ----------
   const renderer = new Renderer(canvas, settings.lowPower);
-  const world = buildCarPark();
+  const world = buildScene(lesson.sceneId);
   const L = world.layout;
   renderer.scene.add(world.root);
   renderer.scene.background = new THREE.Color(0xbcd9ea);
-  renderer.scene.fog = new THREE.Fog(0xcfe0ea, 70, 260);
+  renderer.scene.fog = town ? new THREE.Fog(0xcfe0ea, 90, 340) : new THREE.Fog(0xcfe0ea, 70, 260);
   const carMesh = buildPlayerCar();
   renderer.scene.add(carMesh.group);
   const mirrorCam = new THREE.PerspectiveCamera(55, 3, 0.3, 200);
 
+  // AI cars: one instanced mesh each for bodies, cabins and shadows.
+  const AI_MAX = 24;
+  const aiBox = baseBox();
+  const aiBodies = instanced(aiBox, lambert(0xffffff), Array.from({ length: AI_MAX }, () => ({ x: 0, z: 0, sx: 1.8, sy: 0.62, sz: 4.2, color: 0xffffff })));
+  const aiCabs = instanced(aiBox, lambert(0x2b3440), Array.from({ length: AI_MAX }, () => ({ x: 0, z: 0 })));
+  const aiShadows = instanced(aiBox, new THREE.MeshBasicMaterial({ color: 0, transparent: true, opacity: 0.25, depthWrite: false }), Array.from({ length: AI_MAX }, () => ({ x: 0, z: 0 })));
+  for (const m of [aiBodies, aiCabs, aiShadows]) {
+    m.frustumCulled = false;
+    renderer.scene.add(m);
+  }
+  const aiDummy = new THREE.Object3D();
+  const aiColour = new THREE.Color();
+  const renderTraffic = () => {
+    const cars = traffic.cars.slice(0, AI_MAX);
+    cars.forEach((c, i) => {
+      aiDummy.rotation.set(0, c.heading, 0);
+      aiDummy.position.set(c.x, 0.3, c.z);
+      aiDummy.scale.set(1.8, 0.62, 4.2);
+      aiDummy.updateMatrix();
+      aiBodies.setMatrixAt(i, aiDummy.matrix);
+      aiBodies.setColorAt(i, aiColour.setHex(c.colour));
+      aiDummy.position.set(c.x, 0.92, c.z);
+      aiDummy.scale.set(1.6, 0.55, 2.2);
+      aiDummy.updateMatrix();
+      aiCabs.setMatrixAt(i, aiDummy.matrix);
+      aiDummy.position.set(c.x, 0.015, c.z);
+      aiDummy.scale.set(2.2, 0.01, 4.6);
+      aiDummy.updateMatrix();
+      aiShadows.setMatrixAt(i, aiDummy.matrix);
+    });
+    for (const m of [aiBodies, aiCabs, aiShadows]) {
+      m.count = cars.length;
+      m.instanceMatrix.needsUpdate = true;
+    }
+    if (aiBodies.instanceColor) aiBodies.instanceColor.needsUpdate = true;
+  };
+
   // ---------- Sim + rules ----------
   const car = new Car();
-  car.reset(L.start.x, L.start.z, L.start.heading);
+  const start = setup.start ?? L.start;
+  car.reset(start.x, start.z, start.heading);
   car.gear = 'P';
   car.handbrake = true;
-  const rules = new RulesEngine(day1Checks(), mode === 'test' ? 'test' : 'coach');
+  const rules = new RulesEngine(town ? townChecks() : day1Checks(), mode === 'test' ? 'test' : 'coach');
   const recorder = new Recorder();
+  const traffic = new Traffic(L, setup.traffic ?? 'none', setup.scripted ?? []);
   let t = 0;
-  let belt = mode === 'guided' ? false : mode === 'free';
+  // Day 1 teaches the belt in the guided drive; later lessons start belted except for the test.
+  let belt = mode === 'free' || (mode === 'guided' && lesson.day > 1);
   let signal: SignalState = 'off';
   let signalHeading = 0;
   let signalTurned = false;
@@ -226,6 +267,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     },
     handbrake() {
       car.handbrake = !car.handbrake;
+      if (car.handbrake) handbrakeSinceStop = true;
       sfx.handbrake();
       emit({ type: 'handbrake', t, on: car.handbrake });
       refreshHud();
@@ -328,7 +370,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
   window.addEventListener('keyup', onKey);
 
   // ---------- Guided steps ----------
-  const steps: GuidedStep[] = mode === 'guided' ? lesson.guided.steps : [];
+  const steps: GuidedStep[] = mode === 'guided' ? (lesson.guided?.steps ?? []) : [];
   let stepIdx = -1;
   let stepStart = 0;
   let nudged = false;
@@ -340,6 +382,8 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
         return `mirror.${ev.which}`;
       case 'shoulder':
         return `shoulder.${ev.side}`;
+      case 'turn':
+        return `turned.${ev.dir}`;
       default:
         return ev.type;
     }
@@ -354,7 +398,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     if (i >= steps.length) {
       s.guidedCompletion = 1;
       world.setMarker(null);
-      bubble.say(lesson.guided.outro, 'proud', settings.voice);
+      bubble.say(lesson.guided?.outro ?? 'Lovely.', 'proud', settings.voice);
       sfx.fanfare();
       setTimeout(() => finishStage(), 3500 / app.timeScale);
       return;
@@ -379,23 +423,38 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
         return arg === 'on' ? car.handbrake : !car.handbrake;
       case 'mirror':
       case 'shoulder':
+      case 'turned':
         return stepEvents.has(trig);
+      case 'look':
+        return stepEvents.has(`shoulder.${arg}`);
+      case 'speedAbove':
+        return mph(car.speed) >= Number(arg);
+      case 'zone': {
+        const z = L.markers.find((x) => x.id === arg);
+        return !!z && inRect(z, car.x, car.z);
+      }
       case 'signal':
         return signal === arg;
       case 'moving':
         return car.speed > 0.9;
       case 'marker': {
         const mk = L.markers.find((x) => x.id === arg)!;
-        return inRect({ x0: mk.x0 - 10, x1: mk.x1 + 4, z0: mk.z0 - 6, z1: mk.z1 + 6 }, car.x, car.z);
+        return inRect(grow(mk, town ? 14 : 8), car.x, car.z);
       }
-      case 'stoppedAt':
-        return markerAt(L, car.x, car.z) === arg && Math.abs(car.speed) < 0.05;
+      case 'stoppedAt': {
+        const mk = L.markers.find((x) => x.id === arg);
+        return !!mk && inRect(mk, car.x, car.z) && Math.abs(car.speed) < 0.05;
+      }
     }
     return false;
   };
 
   // ---------- Test drive flow ----------
-  const directionsGiven = new Set<number>();
+  let nextDir = 0;
+  let awaitStop: string | null = null;
+  let stopFor = 0;
+  let wasInside = false;
+  let finishShown = false;
   let finishStoppedFor = 0;
   let finishAskedAt = -1;
 
@@ -479,6 +538,21 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     if (autopilot && !ended) {
       const ap = autopilot.drive(car);
       if (ap) {
+        // Scripted driver keeps a safe distance from AI cars ahead (two-second-ish gap).
+        const [afx, afz] = car.forward;
+        let gap = Infinity;
+        for (const c of traffic.cars) {
+          const dx = c.x - car.x;
+          const dz = c.z - car.z;
+          const along = dx * afx + dz * afz;
+          const across = Math.abs(dx * afz - dz * afx);
+          if (along > 0 && along < 40 && across < 2.2) gap = Math.min(gap, along - 4.2);
+        }
+        const safe = 3 + Math.abs(car.speed) * 1.6;
+        if (gap < safe) {
+          ap.throttle = 0;
+          ap.brake = Math.max(ap.brake, gap < 2.5 ? 0.6 : Math.min(0.45, (safe - gap) * 0.12));
+        }
         throttle = ap.throttle;
         brakeValue = ap.brake;
         steer = ap.steer;
@@ -490,7 +564,9 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     }
     if (settings.steeringAssist) steer = assist(steer);
 
-    const res = ended ? {} : car.step(dt, { throttle, brake: brakeValue, steer }, L);
+    const shape = { x: car.x, z: car.z, heading: car.heading, speed: car.speed, corners: car.corners() };
+    if (!ended) traffic.update(dt, shape);
+    const res = ended ? {} : car.step(dt, { throttle, brake: brakeValue, steer }, L, traffic.cars.length ? traffic.obstacles() : []);
     if (res.kerb !== undefined) emit({ type: 'kerb', t, speed: res.kerb });
     if (res.collision) emit({ type: 'collision', t, speed: res.collision.speed, what: res.collision.what });
 
@@ -499,11 +575,14 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     if (stationary && moving) {
       stationary = false;
       stillFor = 0;
-      if (car.speed > 0) emit({ type: 'moveOff', t });
+      movedOffAt = t;
+      if (car.speed > 0) emit({ type: 'moveOff', t, fromParked: !town || handbrakeSinceStop || kerbGapAtStop < 0.9 });
     } else if (!stationary) {
       stillFor = Math.abs(car.speed) < 0.05 ? stillFor + dt : 0;
       if (stillFor > 0.25) {
         stationary = true;
+        handbrakeSinceStop = false;
+        kerbGapAtStop = town ? pullUpInfo().kerbGap : 0;
         emit({ type: 'stop', t });
       }
     }
@@ -520,16 +599,27 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     }
 
     const limit = speedLimitAt(L, car.x, car.z);
-    let wrongSideBy: number | null = null;
-    for (const lane of L.lanes) {
-      if (inRect(lane, car.x, car.z)) {
-        const east = Math.cos(car.heading - Math.PI / 2) > 0.5;
-        const west = Math.cos(car.heading + Math.PI / 2) > 0.5;
-        if (east) wrongSideBy = car.z - lane.centre;
-        else if (west) wrongSideBy = lane.centre - car.z;
-      }
+    const sit = town ? situation(limit) : null;
+    const wrongSideBy = sit?.passingObstruction ? null : wrongSideAt(L, car.x, car.z, car.heading);
+    emit({
+      type: 'tick',
+      t,
+      dt,
+      speed: car.speed,
+      accel: car.accel,
+      limitMph: limit,
+      heading: car.heading,
+      dist: Math.abs(car.speed * dt),
+      wrongSideBy: sit?.inDoubleWhite ? wrongSideAt(L, car.x, car.z, car.heading) : wrongSideBy,
+      handbrake: car.handbrake,
+      throttle,
+      ...(sit ?? {})
+    });
+    if (town && !ended) {
+      junctionLines();
+      conflicts();
+      detectTurn();
     }
-    emit({ type: 'tick', t, dt, speed: car.speed, accel: car.accel, limitMph: limit, heading: car.heading, dist: Math.abs(car.speed * dt), wrongSideBy, handbrake: car.handbrake, throttle });
     recorder.push({ t, x: car.x, z: car.z, heading: car.heading, speed: car.speed, steer, signal, brake: brakeValue });
 
     for (const p of pendingClips.filter((q) => q.at <= t)) s.clips.push({ fault: p.fault, frames: recorder.clip(p.fault.t, 8) });
@@ -560,15 +650,194 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     engineUpdate(Math.min(1, Math.abs(car.speed) / 14 + throttle * 0.35), throttle);
   };
 
-  const testLogic = (dt: number) => {
-    lesson.test.directions.forEach((d, i) => {
-      if (!directionsGiven.has(i) && car.x > d.atX) {
-        directionsGiven.add(i);
-        bubble.say(d.say, 'happy', settings.voice);
-        if (i === lesson.test.directions.length - 1) world.setMarker(lesson.test.finishMarker);
+  // ---------- Town situation analysis (fed to the rules each tick) ----------
+  let movedOffAt = -Infinity;
+  // Whether the next move-off is from a parked position (kerb or handbrake) or pulling away in traffic.
+  let handbrakeSinceStop = true;
+  let kerbGapAtStop = 0;
+  const situation = (limit: number) => {
+    const [fx, fz] = car.forward;
+    const [rx, rz] = car.right;
+    let passingObstruction = false;
+    let clearance: number | null = null;
+    for (const o of L.obstacles) {
+      if (o.kind !== 'car' && o.kind !== 'van') continue;
+      const ox = (o.x0 + o.x1) / 2;
+      const oz = (o.z0 + o.z1) / 2;
+      const dx = ox - car.x;
+      const dz = oz - car.z;
+      const along = dx * fx + dz * fz;
+      const across = dx * rx + dz * rz; // negative = on our left
+      const halfLen = Math.max(o.x1 - o.x0, o.z1 - o.z0) / 2;
+      const halfWid = Math.min(o.x1 - o.x0, o.z1 - o.z0) / 2;
+      if (across < 0 && across > -4.6 && along > -halfLen - 2 && along < halfLen + 9) {
+        passingObstruction = true;
+        if (Math.abs(along) < halfLen + 2) {
+          const gap = -across - halfWid - car.width / 2;
+          clearance = clearance === null ? gap : Math.min(clearance, gap);
+        }
       }
+    }
+    const oncomingM = passingObstruction ? traffic.oncoming(car.x, car.z, car.heading) : null;
+    const inDoubleWhite = (L.doubleWhite ?? []).some((r) => inRect(r, car.x, car.z));
+    const inNoEntry = (L.noEntry ?? []).some((r) => inRect(r, car.x, car.z) && Math.cos(car.heading - r.into) > 0.5);
+    // "Unduly slow": well under the limit, on a clear road, not near junctions, not pulling up.
+    const v = mph(car.speed);
+    // Clear road: no car ahead of us, going our way, within 45 m.
+    let clearAhead = !traffic.cars.some((c) => {
+      const dx = c.x - car.x;
+      const dz = c.z - car.z;
+      const along = dx * fx + dz * fz;
+      const across = Math.abs(dx * rx + dz * rz);
+      return along > 0 && along < 45 && across < 2.5 && Math.cos(c.heading - car.heading) > 0.5;
     });
-    const inFinish = markerAt(L, car.x, car.z) === lesson.test.finishMarker && Math.abs(car.speed) < 0.05;
+    const nearJunction = (L.junctions ?? []).some((j) => inRect(grow(j.box, 35), car.x, car.z));
+    const pullingUp = mode === 'test' && (finishShown || awaitStop !== null);
+    // Parked cars nearby are a good reason to go slowly (rule 152).
+    const nearParked = L.obstacles.some((o) => (o.kind === 'car' || o.kind === 'van') && Math.hypot((o.x0 + o.x1) / 2 - car.x, (o.z0 + o.z1) / 2 - car.z) < 30);
+    if (passingObstruction || nearParked) clearAhead = false;
+    const undulySlow = v > 1 && v < limit * 0.4 && clearAhead && !nearJunction && !pullingUp && t - movedOffAt > 12;
+    return { passingObstruction, clearance, oncomingM, inDoubleWhite, inNoEntry, undulySlow };
+  };
+
+  // Crossing a give way / stop line.
+  const lineState = new Map<string, { before: boolean; minSpeed: number }>();
+  const junctionLines = () => {
+    const [fx, fz] = car.forward;
+    const front = { x: car.x + fx * 2.05, z: car.z + fz * 2.05 };
+    for (const j of L.junctions ?? []) {
+      const ax = Math.sin(j.approach);
+      const az = Math.cos(j.approach);
+      const cx = (j.line.x0 + j.line.x1) / 2;
+      const cz = (j.line.z0 + j.line.z1) / 2;
+      const sAlong = (front.x - cx) * ax + (front.z - cz) * az;
+      const lateral = Math.abs((front.x - cx) * az - (front.z - cz) * ax);
+      const halfW = Math.max(j.line.x1 - j.line.x0, j.line.z1 - j.line.z0) / 2;
+      const st = lineState.get(j.id) ?? { before: false, minSpeed: Infinity };
+      const aligned = Math.cos(car.heading - j.approach) > 0.5;
+      if (lateral < halfW + 1.2 && aligned && sAlong < 0 && sAlong > -8) {
+        st.before = true;
+        st.minSpeed = Math.min(st.minSpeed, Math.abs(car.speed));
+      } else if (st.before && sAlong >= 0 && lateral < halfW + 2) {
+        emit({ type: 'emerge', t, junction: j.id, kind: j.kind, minSpeed: st.minSpeed });
+        st.before = false;
+        st.minSpeed = Infinity;
+      } else if (sAlong < -8 || lateral > halfW + 4) {
+        st.before = false;
+        st.minSpeed = Infinity;
+      }
+      lineState.set(j.id, st);
+    }
+  };
+
+  // Being in another car's path inside a junction box.
+  const conflicts = () => {
+    const [fx, fz] = car.forward;
+    for (const p of [
+      { x: car.x, z: car.z },
+      { x: car.x + fx * 2, z: car.z + fz * 2 }
+    ]) {
+      const j = junctionBoxAt(L, p.x, p.z);
+      if (!j) continue;
+      for (const c of traffic.cars) {
+        // Only cars whose path we're crossing or entering (not ones following us).
+        if (Math.abs(Math.cos(c.heading - car.heading)) > 0.75 && Math.cos(c.heading - car.heading) > 0) continue;
+        const cfx = Math.sin(c.heading);
+        const cfz = Math.cos(c.heading);
+        const dx = p.x - c.x;
+        const dz = p.z - c.z;
+        const along = dx * cfx + dz * cfz;
+        const across = Math.abs(dx * cfz - dz * cfx);
+        if (along > 0 && along < 60 && across < 1.7) {
+          const ttc = Math.max(0, along - 2.1 - 2.1) / Math.max(c.cruise, 0.5);
+          emit({ type: 'conflict', t, ttc, junction: j.id });
+        }
+      }
+    }
+  };
+
+  // Completed turns (for signal and mirror checks).
+  let lastTurnT = -Infinity;
+  let lastTurnCheck = 0;
+  const detectTurn = () => {
+    if (t - lastTurnCheck < 0.2) return;
+    lastTurnCheck = t;
+    if (Math.abs(car.speed) < 0.5) return;
+    const frames = recorder.frames.filter((f) => f.t >= Math.max(t - 9, lastTurnT));
+    if (frames.length < 5) return;
+    const h0 = frames[0].heading;
+    const dh = angleDiff(car.heading, h0);
+    if (Math.abs(dh) < 1.2) return;
+    // Find where this turn actually began: go back to ~60° before the end of
+    // the turn, then keep going back while the heading was still changing.
+    let i = frames.length - 1;
+    while (i > 0 && Math.abs(angleDiff(frames[i].heading, car.heading)) < 1.05) i--;
+    while (i > 0 && Math.abs(angleDiff(frames[i].heading, frames[i - 1].heading)) > 0.02) i--;
+    const startF = frames[i];
+    lastTurnT = t;
+    if ((L.bends ?? []).some((b) => inRect(b, startF.x, startF.z))) return; // the road bends; no signal needed
+    const turnDh = angleDiff(car.heading, startF.heading);
+    emit({ type: 'turn', t, dir: turnDh > 0 ? 'left' : 'right', startT: startF.t, signalAtStart: startF.signal });
+  };
+
+  /** Facts about where the car is pulled up (for "pull up on the left" tasks). */
+  const pullUpInfo = () => {
+    const onYellow = (L.yellow ?? []).find((y) => inRect(y, car.x, car.z))?.kind ?? null;
+    const near: Rect[] = [...(L.junctions ?? []).map((j) => j.box), ...(L.noEntry ?? [])];
+    let nearJunctionM: number | null = null;
+    for (const r of near) {
+      const dx = Math.max(r.x0 - car.x, 0, car.x - r.x1);
+      const dz = Math.max(r.z0 - car.z, 0, car.z - r.z1);
+      const d = Math.hypot(dx, dz) - 2.05;
+      nearJunctionM = nearJunctionM === null ? d : Math.min(nearJunctionM, d);
+    }
+    const onDoubleWhite = (L.doubleWhite ?? []).some((r) => inRect(r, car.x, car.z));
+    let kerbGap = 0;
+    const lane = laneAt(L, car.x, car.z);
+    if (lane) {
+      const half = lane.axis === 'x' ? (lane.z1 - lane.z0) / 2 : (lane.x1 - lane.x0) / 2;
+      const fx = Math.sin(car.heading);
+      const fz = Math.cos(car.heading);
+      const w = car.width / 2;
+      if (lane.axis === 'x') kerbGap = fx > 0 ? car.z - w - (lane.centre - half) : lane.centre + half - (car.z + w);
+      else kerbGap = fz > 0 ? lane.centre + half - (car.x + w) : car.x - w - (lane.centre - half);
+    }
+    return { onYellow, nearJunctionM, onDoubleWhite, kerbGap };
+  };
+
+  const finishEvent = (): DriveEvent => ({ type: 'finish', t, handbrake: car.handbrake, gear: car.gear, pullUp: lesson.test.pullUp ? pullUpInfo() : undefined });
+
+  const testLogic = (dt: number) => {
+    // Directions are given in order. A direction with an intermediate marker
+    // ("pull up at the marker") waits for the car to stop there first.
+    if (awaitStop) {
+      const mk = L.markers.find((m) => m.id === awaitStop);
+      const inside = !!mk && inRect(mk, car.x, car.z);
+      if (inside) wasInside = true;
+      stopFor = inside && Math.abs(car.speed) < 0.05 ? stopFor + dt : 0;
+      if (stopFor > 0.8) awaitStop = null;
+      else if (mk && wasInside && !inRect(grow(mk, 12), car.x, car.z)) {
+        awaitStop = null; // drove past it; carry on with the route
+        bubble.say('Not to worry, we’ll carry on.', 'neutral', settings.voice);
+      }
+    } else {
+      const d = lesson.test.directions[nextDir];
+      if (d && inRect(d.at, car.x, car.z)) {
+        nextDir++;
+        bubble.say(d.say, 'happy', settings.voice);
+        if (d.marker) {
+          world.setMarker(d.marker);
+          if (d.marker === lesson.test.finishMarker) finishShown = true;
+          else {
+            awaitStop = d.marker;
+            stopFor = 0;
+            wasInside = false;
+          }
+        }
+      }
+    }
+    const fm = L.markers.find((m) => m.id === lesson.test.finishMarker);
+    const inFinish = finishShown && !!fm && inRect(fm, car.x, car.z) && Math.abs(car.speed) < 0.05;
     finishStoppedFor = inFinish ? finishStoppedFor + dt : 0;
     if (finishStoppedFor > 0.8 && finishAskedAt < 0) {
       finishAskedAt = t;
@@ -577,7 +846,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     if (finishAskedAt >= 0) {
       const secured = car.handbrake && car.gear === 'P';
       if ((secured && t - finishAskedAt > 0.6) || t - finishAskedAt > 12 || (Math.abs(car.speed) > 1 && t - finishAskedAt > 2)) {
-        emit({ type: 'finish', t, handbrake: car.handbrake, gear: car.gear });
+        emit(finishEvent());
         endTest(false);
       }
     }
@@ -587,16 +856,29 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     }
   };
 
+  /** Gentle lane-keeping: steer towards the middle of the left-hand lane. */
   const assist = (steer: number): number => {
     if (Math.abs(steer) > 0.35 || car.speed < 1) return steer;
-    for (const lane of L.lanes) {
-      if (!inRect(lane, car.x, car.z)) continue;
-      const east = Math.cos(car.heading - Math.PI / 2) > 0.7;
-      if (!east) return steer;
-      const err = angleDiff(car.heading, Math.PI / 2);
-      return Math.max(-1, Math.min(1, steer + err * 1.4 + (car.z - -2.6) * -0.12));
+    const lane = laneAt(L, car.x, car.z);
+    if (!lane || junctionBoxAt(L, car.x, car.z)) return steer;
+    const fx = Math.sin(car.heading);
+    const fz = Math.cos(car.heading);
+    let target: number;
+    let axisHeading: number;
+    let lateral: number; // positive = too far right
+    if (lane.axis === 'x') {
+      if (Math.abs(fx) < 0.9) return steer;
+      axisHeading = fx > 0 ? Math.PI / 2 : -Math.PI / 2;
+      target = lane.centre + (fx > 0 ? -1.9 : 1.9);
+      lateral = fx > 0 ? car.z - target : target - car.z;
+    } else {
+      if (Math.abs(fz) < 0.9) return steer;
+      axisHeading = fz > 0 ? 0 : Math.PI;
+      target = lane.centre + (fz > 0 ? 1.9 : -1.9);
+      lateral = fz > 0 ? target - car.x : car.x - target;
     }
-    return steer;
+    const err = angleDiff(car.heading, axisHeading); // positive = pointing left
+    return Math.max(-1, Math.min(1, steer + err * 1.4 - lateral * 0.12));
   };
 
   // ---------- Rendering ----------
@@ -638,6 +920,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     }
 
     world.update(t);
+    if (traffic.cars.length || aiBodies.count) renderTraffic();
 
     // Mirror inset.
     let insetView = null;
@@ -669,7 +952,8 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     if (settings.speedHud) {
       if (limitEl.dataset.lim !== String(lim)) {
         limitEl.dataset.lim = String(lim);
-        limitEl.innerHTML = speedRoundelSvg(lim, 40);
+        const zone = L.speedZones.find((z) => inRect(z, car.x, car.z));
+        limitEl.innerHTML = zone?.name.includes('national') ? signSvg({ kind: 'nsl' }, 40, 'National speed limit') : speedRoundelSvg(lim, 40);
       }
     } else limitEl.innerHTML = '';
   };
@@ -789,8 +1073,72 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     },
     finish: () => finishStage(),
     endTest: () => {
-      emit({ type: 'finish', t, handbrake: car.handbrake, gear: car.gear });
+      emit(finishEvent());
       endTest(false);
+    },
+    traffic,
+    /** Put the car somewhere (tests and screenshots). */
+    place(x: number, z: number, heading: number) {
+      car.reset(x, z, heading);
+    },
+    get finishAsked() {
+      return finishAskedAt >= 0;
+    },
+    /** Run a list of scripted steps through the same controls the player uses. */
+    run(steps: ScriptStep[]) {
+      let i = 0;
+      const nextStep = (): void => {
+        if (ended || i >= steps.length) return;
+        const st = steps[i++];
+        if ('act' in st) {
+          if (st.act === 'belt') act.belt();
+          else if (st.act === 'handbrake') act.handbrake();
+          else if (st.act === 'mirror') act.mirror((st.arg ?? 'interior') as MirrorId);
+          else if (st.act === 'look') act.shoulder((st.arg ?? 'right') as Side);
+          else if (st.act === 'signal') act.signal((st.arg ?? 'off') as Side | 'off');
+          else if (st.act === 'gear') act.gear((st.arg ?? 'D') as Gear);
+          return script.at(0.25, nextStep);
+        }
+        if ('brake' in st) {
+          brake.set(st.brake);
+          return script.at(0.25, nextStep);
+        }
+        if ('wait' in st) return script.at(st.wait, nextStep);
+        if ('drive' in st) {
+          brake.set(false);
+          script.route(st.drive.map(([x, z, v]) => ({ x, z, v })));
+          const poll = () => (autopilot ? script.at(0.2, poll) : nextStep());
+          return script.at(0.2, poll);
+        }
+        if ('waitGap' in st) {
+          const need = st.secs ?? 6;
+          const poll = () => {
+            const gap = Math.min(...st.waitGap.map(([x, z]) => traffic.timeToReach(x, z)));
+            return gap > need ? nextStep() : script.at(0.2, poll);
+          };
+          return poll();
+        }
+        if ('waitFinishAsked' in st) {
+          const poll = () => (finishAskedAt >= 0 ? nextStep() : script.at(0.25, poll));
+          return poll();
+        }
+        if ('moveOff' in st) {
+          const seq: ScriptStep[] = [
+            { brake: true },
+            { act: 'gear', arg: 'D' },
+            { act: 'handbrake' },
+            { act: 'mirror', arg: 'interior' },
+            { act: 'mirror', arg: st.moveOff },
+            { act: 'look', arg: st.moveOff },
+            { act: 'signal', arg: st.moveOff }
+          ];
+          if (!belt) seq.unshift({ act: 'belt' });
+          if (!car.handbrake) seq.splice(seq.findIndex((x) => 'act' in x && x.act === 'handbrake'), 1);
+          steps.splice(i, 0, ...seq);
+          return nextStep();
+        }
+      };
+      nextStep();
     }
   };
   (window as unknown as { __drive?: typeof hooks }).__drive = hooks;
@@ -826,9 +1174,9 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     maybeFullscreenTip();
     refreshHud();
     renderer.resize();
-    if (settings.lineHints && HINT_PATHS[mode].length) world.setHintPath(HINT_PATHS[mode]);
+    if (settings.lineHints && setup.hint?.length) world.setHintPath(setup.hint);
     engineStart();
-    const intro = mode === 'guided' ? lesson.guided.intro : mode === 'free' ? lesson.free.intro : lesson.test.intro;
+    const intro = (mode === 'guided' ? lesson.guided?.intro : mode === 'free' ? lesson.free?.intro : lesson.test.intro) ?? '';
     bubble.say(intro, 'happy', settings.voice);
     if (mode === 'guided') setTimeout(() => stepIdx < 0 && startStep(0), app.e2e ? 50 : 4200);
     if (mode === 'test') {

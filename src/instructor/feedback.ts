@@ -7,7 +7,13 @@ import type { QuizQuestion } from '../content/schema';
  * Maggie's debrief: specific, kind, and always citing the Highway Code.
  * Pure function so it can be unit-tested.
  */
-export function debriefLines(r: LessonResult, tally: TestTally, faults: readonly Fault[], quiz: { correct: number; total: number; questions: QuizQuestion[] }): string[] {
+export function debriefLines(
+  r: LessonResult,
+  tally: TestTally,
+  faults: readonly Fault[],
+  quiz: { correct: number; total: number; questions: QuizQuestion[] },
+  opts: { boss?: boolean } = {}
+): string[] {
   const out: string[] = [];
   const groups = groupFaults(faults);
   const worst = groups[0];
@@ -35,6 +41,7 @@ export function debriefLines(r: LessonResult, tally: TestTally, faults: readonly
       out.push(`On the questions, you got ${quiz.correct} out of ${quiz.total}. Have a quick read of rule${rules.length > 1 ? 's' : ''} ${rules.join(', ')} before next time.`);
     }
   }
-  if (r.passed) out.push('See you tomorrow. Same time, same car park, and I’ll bring the biscuits.');
+  if (r.passed && opts.boss) out.push('That’s week one done. I’m genuinely proud of you. Tomorrow: roundabouts. Bring a flask.');
+  else if (r.passed) out.push('See you tomorrow. Same time, and I’ll bring the biscuits.');
   return out;
 }

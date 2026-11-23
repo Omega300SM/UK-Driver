@@ -5,6 +5,7 @@ import { SpeechBubble } from '../../instructor/bubble';
 import { LINES, pick } from '../../instructor/maggie';
 import { goHome, next } from '../nav';
 import { sfx } from '../../platform/audio';
+import { signSvg } from '../../world/signSvg';
 
 export function quizScreen(s: LessonSession): Screen {
   const qs = s.lesson.quiz;
@@ -56,7 +57,13 @@ export function quizScreen(s: LessonSession): Screen {
       });
       opts.append(b);
     });
-    body.replaceChildren(h('div', { class: 'muted', style: { fontWeight: '800' } }, `Question ${i + 1} of ${qs.length}`), h('div', { class: 'q' }, q.question), opts, after);
+    const sign = q.sign ? h('div', { class: 'quiz-sign', html: signSvg({ kind: q.sign.kind, value: q.sign.value }, 96, 'Road sign for this question') }) : null;
+    body.replaceChildren(
+      h('div', { class: 'muted', style: { fontWeight: '800' } }, `Question ${i + 1} of ${qs.length}`),
+      h('div', { class: 'q-row' }, sign, h('div', { class: 'q' }, q.question)),
+      opts,
+      after
+    );
     if (i === 0) bubble.say('A few Highway Code questions. Take your time, there’s no clock.');
     else bubble.say(q.question);
   };

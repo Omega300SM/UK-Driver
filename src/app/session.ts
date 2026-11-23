@@ -23,7 +23,17 @@ export class LessonSession {
   beltOn = false;
 
   constructor(readonly lesson: LessonContent) {
-    this.stages = ['briefing', ...(lesson.drill ? (['drill'] as Stage[]) : []), 'guided', 'free', 'test', 'quiz', 'debrief'];
+    this.stages = [
+      'briefing',
+      ...(lesson.drill ? (['drill'] as Stage[]) : []),
+      ...(lesson.guided ? (['guided'] as Stage[]) : []),
+      ...(lesson.free ? (['free'] as Stage[]) : []),
+      'test',
+      'quiz',
+      'debrief'
+    ];
+    // Boss levels have no guided drive; they don't lose marks for it.
+    if (!lesson.guided) this.guidedCompletion = 1;
   }
 
   get stage(): Stage {

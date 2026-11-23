@@ -1478,3 +1478,44 @@ body.needs-landscape #rotate {
 .settings [data-testid='voice-status'] b {
   display: inline;
 }
+
+/* ---------- Signs in briefings and quizzes ---------- */
+.sign-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 8px;
+}
+.sign-gallery figure {
+  margin: 0;
+  width: 84px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--ink-2);
+}
+.sign-gallery svg {
+  height: 56px;
+  width: auto;
+}
+.q-row {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.quiz-sign svg {
+  height: 84px;
+  width: auto;
+  flex: none;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .quiz-sign svg {
+    height: 64px;
+  }
+  .sign-gallery svg {
+    height: 44px;
+  }
+}

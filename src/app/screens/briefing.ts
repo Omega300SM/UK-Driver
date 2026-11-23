@@ -5,6 +5,7 @@ import { SpeechBubble } from '../../instructor/bubble';
 import { diagram } from '../../ui/diagrams';
 import { goHome, next } from '../nav';
 import { sfx } from '../../platform/audio';
+import { signSvg, signName } from '../../world/signSvg';
 
 export function briefingScreen(s: LessonSession): Screen {
   const slides = s.lesson.briefing;
@@ -18,8 +19,15 @@ export function briefingScreen(s: LessonSession): Screen {
 
   const render = () => {
     const sl = slides[i];
+    const signs = sl.signs?.length
+      ? h(
+          'div',
+          { class: 'sign-gallery' },
+          ...sl.signs.map((g) => h('figure', {}, h('div', { html: signSvg({ kind: g.kind, value: g.value }, 64) }), h('figcaption', {}, g.caption ?? signName({ kind: g.kind, value: g.value }))))
+        )
+      : null;
     body.replaceChildren(
-      h('div', { class: 'diagram', html: diagram(sl.diagram) }),
+      sl.diagram === 'none' && signs ? h('div', { class: 'diagram' }, signs) : h('div', { class: 'diagram' }, h('div', { html: diagram(sl.diagram), style: { width: '100%' } }), signs),
       h(
         'div',
         {},

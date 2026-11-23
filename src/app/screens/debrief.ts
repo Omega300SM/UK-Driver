@@ -20,7 +20,7 @@ export function debriefScreen(s: LessonSession): Screen {
   const outcome: RecordOutcome = recordResult(app.save, s.lesson.day, result, s.testFaults, now(), s.lesson.badge);
   persist();
 
-  const lines = debriefLines(result, t, s.testFaults, { correct: s.quizCorrect, total: s.quizTotal, questions: s.lesson.quiz });
+  const lines = debriefLines(result, t, s.testFaults, { correct: s.quizCorrect, total: s.quizTotal, questions: s.lesson.quiz }, { boss: s.lesson.boss });
   const bubble = new SpeechBubble({ size: 56, mood: result.passed ? 'proud' : 'concerned' });
 
   const stars = h('div', { class: 'stars', 'aria-label': `${result.stars} of 3 stars`, 'data-testid': 'stars', 'data-stars': String(result.stars) });
@@ -49,11 +49,12 @@ export function debriefScreen(s: LessonSession): Screen {
     if (b) badgesEl.append(h('div', { class: 'badge-earned' }, h('span', { class: 'ico' }, b.icon), h('div', {}, h('div', {}, `Badge earned: ${b.name}`), h('small', { class: 'muted' }, b.description))));
   }
 
+  const nextDay = s.lesson.day + 1;
   const nextInfo = result.passed
     ? outcome.unlockedNext === 'unlocked'
-      ? 'Day 2 is unlocked.'
-      : 'Day 2 unlocks tomorrow. (Sprint mode in Settings removes the daily gate.)'
-    : 'You need 80% and no serious or dangerous faults to unlock Day 2.';
+      ? `Day ${nextDay} is unlocked.`
+      : `Day ${nextDay} unlocks tomorrow. (Sprint mode in Settings removes the daily gate.)`
+    : `You need 80% and no serious or dangerous faults to unlock Day ${nextDay}.`;
 
   const retry = h(
     'button',
