@@ -21,8 +21,9 @@ export function onboardingScreen(): Screen {
     persist();
     applySettings();
     sfx.good();
-    speak('Hello, I’m Maggie. Lovely to meet you. Pop the kettle on, we’ve got thirty days.');
     goHome();
+    // Speak after the screen change (which stops any old line), still inside this tap.
+    speak('Hello, I’m Maggie. Lovely to meet you. Pop the kettle on, we’ve got thirty days.');
   });
 
   const el = h(

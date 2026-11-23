@@ -4,7 +4,7 @@ import type { Settings } from '../../scoring/progress';
 import { newSave } from '../../scoring/progress';
 import { DISCLAIMERS } from '../../content/disclaimers';
 import { requestMotionPermission, startTilt, stopTilt } from '../../platform/motion';
-import { hasEnGbVoice, speak, speechSupported, unlockSpeech, voiceName } from '../../platform/speech';
+import { hasEnGbVoice, speak, speechSupported, unlockSpeech, speechStatus, speechLog } from '../../platform/speech';
 import { unlockAudio } from '../../platform/audio';
 import { sfx } from '../../platform/audio';
 import { toast } from './common';
@@ -43,31 +43,7 @@ export function settingsScreen(back: () => void): Screen {
         if (v) setTimeout(() => speak('Lovely, you can hear me now.'), 50);
       }),
       toggle('sound', 'Sound effects', 'Engine, indicator ticks, chimes.'),
-      h(
-        'div',
-        { class: 'row' },
-        h(
-          'div',
-          {},
-          h('b', {}, 'Test Maggie’s voice'),
-          h('small', {}, speechSupported() ? `Voice: ${voiceName() ?? 'device default'}. No sound? Check the volume buttons and that voice is on above.` : 'This browser has no speech support. Subtitles still show everything.')
-        ),
-        h(
-          'button',
-          {
-            class: 'btn small',
-            'data-testid': 'test-voice',
-            onclick: () => {
-              unlockAudio();
-              unlockSpeech();
-              sfx.good();
-              if (!app.save.settings.voice) setSetting('voice', true);
-              speak('Right then. If you can hear me, we’re all set. Lovely.');
-            }
-          },
-          '▶ Play'
-        )
-      )
+      voiceCheck()
     ),
     h(
       'div',
@@ -146,4 +122,39 @@ function cameraPicker(): HTMLElement {
   };
   wrap.append(mk('chase', 'Behind'), mk('cockpit', 'Seat'));
   return wrap;
+}
+
+/** Voice test + diagnostics, so a silent iPhone can be debugged from a screenshot. */
+function voiceCheck(): HTMLElement {
+  const status = h('div', { class: 'small-print', 'data-testid': 'voice-status', style: { marginTop: '8px', lineHeight: '1.5' } });
+  const refresh = () => {
+    const st = speechStatus();
+    status.replaceChildren(
+      ...Object.entries(st).map(([k, v]) => h('div', {}, h('b', {}, `${k}: `), v)),
+      h('div', { style: { marginTop: '6px', fontFamily: 'ui-monospace, monospace', fontSize: '11px', whiteSpace: 'pre-wrap' } }, speechLog.slice(-6).join('\n') || 'No speech events yet.')
+    );
+  };
+  const play = (defaultVoice: boolean) => () => {
+    unlockAudio();
+    unlockSpeech();
+    sfx.good();
+    if (!app.save.settings.voice) setSetting('voice', true);
+    speak('Right then. If you can hear me, we’re all set. Lovely.', undefined, { defaultVoice });
+    refresh();
+    setTimeout(refresh, 1200);
+    setTimeout(refresh, 4000);
+  };
+  refresh();
+  return h(
+    'div',
+    { class: 'row', style: { flexDirection: 'column', alignItems: 'stretch' } },
+    h('div', {}, h('b', {}, 'Test Maggie’s voice'), h('small', {}, speechSupported() ? 'No sound? Turn the volume up with the side buttons, then try the device voice.' : 'This browser has no speech support. Subtitles still show everything.')),
+    h(
+      'div',
+      { style: { display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' } },
+      h('button', { class: 'btn small', 'data-testid': 'test-voice', onclick: play(false) }, '▶ Play'),
+      h('button', { class: 'btn small secondary', 'data-testid': 'test-voice-default', onclick: play(true) }, '▶ Device voice')
+    ),
+    status
+  );
 }

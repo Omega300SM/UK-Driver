@@ -1475,3 +1475,6 @@ body.needs-landscape #rotate {
     display: inline;
   }
 }
+.settings [data-testid='voice-status'] b {
+  display: inline;
+}
