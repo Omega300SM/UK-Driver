@@ -148,7 +148,7 @@ function voiceCheck(): HTMLElement {
   return h(
     'div',
     { class: 'row', style: { flexDirection: 'column', alignItems: 'stretch' } },
-    h('div', {}, h('b', {}, 'Test Maggie’s voice'), h('small', {}, speechSupported() ? 'No sound? Turn the volume up with the side buttons, then try the device voice.' : 'This browser has no speech support. Subtitles still show everything.')),
+    h('div', {}, h('b', {}, 'Test Maggie’s voice'), h('small', {}, speechSupported() ? 'No sound? On iPhone, the silent switch (left side, above the volume buttons) mutes Maggie’s voice: flip it so no orange shows. Then turn the volume up and try again.' : 'This browser has no speech support. Subtitles still show everything.')),
     h(
       'div',
       { style: { display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' } },

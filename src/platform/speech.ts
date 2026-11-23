@@ -87,7 +87,8 @@ function track(u: SpeechSynthesisUtterance, label: string, onEnd?: () => void): 
     if (current === u) current = null;
     if (unlockInFlight === u) unlockInFlight = null;
     const code = (e as SpeechSynthesisErrorEvent).error ?? 'unknown';
-    log(`error: ${code} (${label})`);
+    // 'canceled'/'interrupted' just mean Maggie was cut off (e.g. a screen change).
+    log(code === 'canceled' || code === 'interrupted' ? `stopped: ${label}` : `error: ${code} (${label})`);
     onEnd?.();
   };
 }
