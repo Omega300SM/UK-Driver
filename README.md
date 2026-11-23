@@ -6,7 +6,18 @@ It's an installable PWA (Vite + TypeScript + Three.js). It plays offline once lo
 
 > **Important.** This is a learning aid. It does not replace lessons with a DVSA-approved driving instructor. You need a provisional licence to drive on public roads, and the [Highway Code](https://www.gov.uk/guidance/the-highway-code) is the legal reference. Never play while driving. Content is written for England.
 
-**Status:** Day 1 (cockpit drill and controls) is complete end to end, as a vertical slice for review. Days 2–30 are listed in the map and marked "Coming soon". See [PLAN.md](PLAN.md) for the roadmap and [NEEDS_REVIEW.md](NEEDS_REVIEW.md) for accuracy notes.
+**Status:** Week 1 is complete: Day 1 (cockpit drill, in a car park) and Days 2–7 in the market town of Little Ashby, ending with the **Market Town Test** boss. Days 8–30 are listed on the map as "Coming soon". See [PLAN.md](PLAN.md) for the roadmap and [NEEDS_REVIEW.md](NEEDS_REVIEW.md) for accuracy notes.
+
+### Week 1: Foundations
+| Day | Lesson | Where |
+|---|---|---|
+| 1 | Cockpit drill and controls | Leisure centre car park |
+| 2 | Moving off, stopping and MSM | Mill Lane |
+| 3 | Driving on the left: position, narrow roads, meeting traffic | Mill Lane (parked cars, oncoming car) |
+| 4 | Speed limits: national limit, 30, 20 zone, cameras | Ashby Road into town |
+| 5 | Road signs and markings, yellow and white lines | Market Street → Ashby Road |
+| 6 | Junctions: give way, STOP, emerging, turning right | Mill Lane, Market Street, Church Street (traffic) |
+| 7 | **BOSS: Market Town Test** (no guided drive, marked like the real thing) | A full loop of Little Ashby |
 
 ---
 
@@ -23,7 +34,7 @@ npm run dev          # http://localhost:5173 (also on your LAN, for a phone on t
 | `npm run build` | Type-check and build to `dist/` (with service worker) |
 | `npm run preview` | Serve the production build on port 4173 |
 | `npm test` | Unit tests (Vitest): rules engine, scoring, unlocks, save/load, car model, content checks |
-| `npm run e2e` | Playwright on iPhone 13 emulation, portrait and landscape (builds first). Add `-- --trace off` to skip tracing |
+| `npm run e2e` | Playwright on iPhone 13 emulation, portrait and landscape (builds first). Add `-- --trace off` to skip tracing. Includes a scripted "careful learner" drive of every Week 1 test route, which must score zero faults |
 | `node scripts/make-icons.mjs` | Re-render the PNG app icons from `public/icons/icon.svg` |
 
 Add `?debug` to the URL for an FPS counter. `?e2e` exposes test hooks (`window.__DE`, `window.__drive`).
@@ -83,9 +94,10 @@ src/
    - `quiz`: 3–5 questions, each with `explain` and `rules`.
    - `rules`: the rule numbers the lesson cites.
 3. **Register it** in `LESSONS` in `src/content/curriculum.ts`. The day then shows as available on the map.
-4. **Scene.** Reuse `carPark`, or add a layout in `src/world/scenes/<name>Layout.ts` (pure data: drivable rects, kerbs, obstacles, markers, speed zones, lanes) plus a Three.js builder beside it.
-5. **New rules checks.** Add a check to `src/rules/checks/`, its fault text and severity to `src/rules/faults.ts` (citing rule numbers), and unit tests in `tests/unit/rules.test.ts`.
-6. Run `npm test` and `npm run e2e`.
+4. **Scene.** Reuse `carPark` or `town` (Little Ashby), or add a layout in `src/world/scenes/<name>Layout.ts` (pure data, see `src/world/layout.ts`: roads, kerbs, obstacles, markers, speed zones, lanes, markings, signs, junctions, yellow lines) plus a Three.js builder, and register it in `src/world/scenes/index.ts`. Give each drive a `start`, a `hint` route, a `traffic` level and any `scripted` cars (e.g. an oncoming car released when you reach an area).
+5. **Test route.** Add a scripted good drive to `tests/e2e/routes.ts`; the Week 1 spec drives it and expects zero faults. It catches impossible corners, unreachable markers and over-strict rules.
+6. **New rules checks.** Add a check to `src/rules/checks/`, its fault text and severity to `src/rules/faults.ts` (citing rule numbers), and unit tests in `tests/unit/rules.test.ts`.
+7. Run `npm test` and `npm run e2e`.
 
 ### Writing in Maggie's voice
 British English and UK terms (bonnet, boot, kerb, give way, dual carriageway). She's warm, specific and drily funny, and never condescending. Praise briefly ("Lovely."), explain mistakes kindly with the rule number, and always offer another go. Every spoken line is also shown as a subtitle, so keep lines short enough to read in a few seconds.
@@ -94,4 +106,4 @@ British English and UK terms (bonnet, boot, kerb, give way, dual carriageway). S
 
 ## Accuracy
 
-Rules cited in Day 1 were checked against gov.uk on 23 November 2026: rules 97, 99, 103, 112, 123, 126, 159, 160, 161 and 239. Fault severities, timing windows and pass marks are game-design choices modelled on DVSA marking, and are listed for review in `NEEDS_REVIEW.md`. Road signs are original procedural drawings that follow UK shapes and colours. Cars are generic, with no real brands.
+Rules cited in Week 1 were checked against gov.uk on 23 November 2026: rules 97, 99, 103, 109, 112, 123, 124, 125, 126, 127, 129, 146, 152, 159, 160, 161, 163, 170, 171, 172, 179, 180, 182, 183, 238, 239, 240 and 243, plus the Traffic signs and Road markings sections. Fault severities, timing windows and pass marks are game-design choices modelled on DVSA marking, and are listed for review in `NEEDS_REVIEW.md`. Road signs are original procedural drawings that follow UK shapes and colours. Cars are generic, with no real brands.

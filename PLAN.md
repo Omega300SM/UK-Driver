@@ -74,9 +74,9 @@ tests/e2e              Playwright (iPhone 13 portrait + landscape): launch, less
 | M1 | Driving core | Renderer, car park scene, car model, touch controls, cameras |
 | M2 | Rules + scoring | Event bus, checks, fault model, recorder, DVSA tally, lesson %, unlocks |
 | M3 | Instructor | Maggie avatar, subtitles, en-GB speech, dialogue variety |
-| M4 | **Day 1 vertical slice** | Briefing → drill → guided → free → test → quiz → debrief + replay |
-| M5 | Tests + docs | Vitest + Playwright, README, Vercel guide → **pause for iPhone review** |
-| M6 | Week 1 | Days 2–7: town roads, junctions, signs/markings, speed limits, BOSS: Market Town |
+| M4 | **Day 1 vertical slice** ✅ | Briefing → drill → guided → free → test → quiz → debrief + replay |
+| M5 | Tests + docs ✅ | Vitest + Playwright, README, Vercel guide → iPhone review done (layout, two-finger controls, voice fixes) |
+| M6 | Week 1 ✅ | Days 2–7 in Little Ashby: moving off/stopping, road position and meeting, speed limits, signs and markings, junctions, BOSS: Market Town Test. AI traffic, scripted test routes |
 | M7 | Week 2 | Roundabouts (incl. bonus "magic"), crossings, lights, parking, vulnerable road users, AI traffic/peds/cyclists, BOSS: Rush Hour |
 | M8 | Week 3 | Country lanes, weather + stopping distances, dual carriageways, motorways + smart motorways, night, BOSS: Coast run |
 | M9 | Week 4 | Hazard perception clips, special situations, law, eco/EV/warning lights, sat nav + show me/tell me, mock theory + practical, Grand Tour, graduation certificate (shareable PNG) |
