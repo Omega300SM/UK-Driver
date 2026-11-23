@@ -102,6 +102,114 @@ export const FAULTS = {
     message: 'A toot while we were stationary. The horn is for warning others while you’re moving, not for saying hello.',
     rules: [112]
   },
+  'turn-no-signal': {
+    severity: 'minor',
+    category: 'Signals – necessary',
+    message: 'We turned without a signal. Even if you can’t see anyone, someone may be watching: a pedestrian, a cyclist, a car you haven’t spotted.',
+    rules: [103, 182]
+  },
+  'turn-wrong-signal': {
+    severity: 'minor',
+    category: 'Signals – correctly',
+    message: 'The indicator was showing the wrong way for that turn. A wrong signal is worse than none, because people act on it.',
+    rules: [103]
+  },
+  'turn-no-mirror': {
+    severity: 'minor',
+    category: 'Use of mirrors – change direction',
+    message: 'No mirror check before that turn. Mirrors first, every time: Mirror, Signal, Manoeuvre.',
+    rules: [161, 179, 182]
+  },
+  'stop-not-stopped': {
+    severity: 'serious',
+    category: 'Junctions – stop sign',
+    message: 'That was a STOP sign, and we rolled over the line. At a stop line the wheels MUST stop completely, even if the road looks clear.',
+    rules: [171]
+  },
+  'junction-observation': {
+    severity: 'minor',
+    category: 'Junctions – observation',
+    message: 'We emerged without a proper look both ways. Right, left, and right again before you commit.',
+    rules: [170]
+  },
+  'junction-pulled-out': {
+    severity: 'serious',
+    category: 'Junctions – emerging',
+    message: 'We pulled out in front of another car and made it slow down. Wait for a gap big enough that nobody has to change speed for you.',
+    rules: [170, 172]
+  },
+  'junction-pulled-out-dangerous': {
+    severity: 'dangerous',
+    category: 'Junctions – emerging',
+    message: 'We pulled out right in front of a car. That’s the kind of thing that causes real collisions, so I had to step in.',
+    rules: [170, 172]
+  },
+  meeting: {
+    severity: 'minor',
+    category: 'Meeting traffic',
+    message: 'The parked cars were on our side, so the oncoming car had priority. Hang back and let them through first.',
+    rules: [163]
+  },
+  'meeting-serious': {
+    severity: 'serious',
+    category: 'Meeting traffic',
+    message: 'We pulled out round the parked cars with another car coming straight at us. With an obstruction on your side, you give way.',
+    rules: [163]
+  },
+  clearance: {
+    severity: 'minor',
+    category: 'Clearance – obstructions',
+    message: 'We passed that parked car a bit close. Leave room for a door to open, about a car door’s width.',
+    rules: [152]
+  },
+  'double-white': {
+    severity: 'serious',
+    category: 'Road markings',
+    message: 'We crossed the double white lines where the line on our side was solid. You MUST NOT cross or straddle those.',
+    rules: [129]
+  },
+  'no-entry': {
+    severity: 'serious',
+    category: 'Traffic signs',
+    message: 'We drove into a No Entry road. Red circle, white bar: it’s an order, not a suggestion.',
+    rules: [109]
+  },
+  progress: {
+    severity: 'minor',
+    category: 'Progress – appropriate speed',
+    message: 'We were dawdling well under the limit on a clear road. Too slow holds others up and tempts them into silly overtakes. Make sensible progress.',
+    rules: []
+  },
+  'park-double-yellow': {
+    severity: 'serious',
+    category: 'Normal stops',
+    message: 'We pulled up on double yellow lines. They mean no waiting at any time.',
+    rules: [238]
+  },
+  'park-single-yellow': {
+    severity: 'minor',
+    category: 'Normal stops',
+    message: 'We pulled up on a single yellow line. Check the plate for the times; if you can’t see one, choose somewhere else.',
+    rules: [238]
+  },
+  'park-junction': {
+    severity: 'serious',
+    category: 'Normal stops',
+    message: 'We stopped within ten metres of a junction. That blocks other drivers’ view and their way in and out.',
+    rules: [243]
+  },
+  'park-double-white': {
+    severity: 'serious',
+    category: 'Normal stops',
+    message: 'We stopped on a road with double white lines. You MUST NOT stop or park there, except to pick up or drop off passengers or to load or unload.',
+    rules: [240]
+  },
+  'park-kerb-far': {
+    severity: 'minor',
+    category: 'Normal stops',
+    message: 'We stopped a long way out from the kerb. Pull in close and parallel to the side so others can pass.',
+    rules: [239]
+  },
   'not-secured': {
     severity: 'minor',
     category: 'Control – securing the car',

@@ -83,7 +83,7 @@ export function moveOffObservationCheck(): Check {
   return {
     id: 'moveoff-observation',
     onEvent(ev, ctx) {
-      if (ev.type !== 'moveOff') return null;
+      if (ev.type !== 'moveOff' || ev.fromParked === false) return null;
       const out: FaultCode[] = [];
       if (!mirrorRecent(ctx, ev.t, TUNING.mirrorWindowS, ['interior', 'right'])) out.push('moveoff-mirrors');
       if (ev.t - ctx.lastShoulder.right > TUNING.shoulderWindowS) out.push('moveoff-blindspot');

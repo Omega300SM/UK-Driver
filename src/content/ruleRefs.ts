@@ -3,7 +3,7 @@ import type { RuleRef } from './schema';
 const HC = 'https://www.gov.uk/guidance/the-highway-code';
 
 /**
- * Highway Code references. Text paraphrased from gov.uk, checked 23 Nov 2026.
+ * Highway Code references. Text paraphrased from gov.uk, checked 23 Nov 2026 (Days 1–7).
  * Add new rules here and cite them by number from lessons and faults.
  */
 export const RULES: Record<number, RuleRef> = {
@@ -40,6 +40,132 @@ export const RULES: Record<number, RuleRef> = {
     summary:
       'If you will be stationary for more than a couple of minutes, apply the parking brake and switch off the engine.',
     url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
+  },
+  109: {
+    rule: 109,
+    title: 'Traffic signs and signals',
+    summary:
+      'You MUST obey all traffic light signals and traffic signs giving orders. Know, understand and act on all other signs and road markings.',
+    url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
+  },
+  124: {
+    rule: 124,
+    title: 'Speed limits',
+    summary:
+      'You MUST NOT exceed the maximum speed limits. In England a 30 mph limit generally applies to roads with street lights unless signs show otherwise; single carriageways are 60 mph for cars unless signed lower.',
+    url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
+  },
+  125: {
+    rule: 125,
+    title: 'The speed limit is a maximum',
+    summary:
+      'The speed limit is the absolute maximum and does not mean it is safe to drive at that speed in all conditions.',
+    url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
+  },
+  127: {
+    rule: 127,
+    title: 'Broken white centre line',
+    summary:
+      'A broken white line marks the centre of the road. When the lines get longer and the gaps shorter, there is a hazard ahead.',
+    url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
+  },
+  129: {
+    rule: 129,
+    title: 'Double white lines, solid nearest you',
+    summary:
+      'Where the line nearer to you is solid, you MUST NOT cross or straddle it, except in the cases the rule lists (such as passing a stationary vehicle when the road is clear).',
+    url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
+  },
+  146: {
+    rule: 146,
+    title: 'Adapt your driving',
+    summary:
+      'Do not treat speed limits as a target; take road and traffic conditions into account, and be prepared for road users emerging at junctions.',
+    url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
+  },
+  152: {
+    rule: 152,
+    title: 'Residential streets',
+    summary:
+      'Drive slowly and carefully where there are likely to be pedestrians, cyclists and parked cars. Look out for car doors opening and children running out between parked cars.',
+    url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
+  },
+  163: {
+    rule: 163,
+    title: 'Overtaking and obstructions',
+    summary:
+      'Among other things: give way to oncoming vehicles before passing parked vehicles or other obstructions on your side of the road.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  170: {
+    rule: 170,
+    title: 'Take extra care at junctions',
+    summary:
+      'Watch out for cyclists, motorcyclists and pedestrians; look all around before emerging; do not cross or join a road until there is a gap large enough to do so safely.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  171: {
+    rule: 171,
+    title: 'Stop signs',
+    summary:
+      'You MUST stop behind the line at a junction with a Stop sign and a solid white line across the road. Wait for a safe gap before you move off.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  172: {
+    rule: 172,
+    title: 'Give way junctions',
+    summary:
+      'You MUST give way to traffic on the main road when emerging from a junction with broken white lines across the road.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  179: {
+    rule: 179,
+    title: 'Turning right',
+    summary:
+      'Well before you turn right, use your mirrors, give a right-turn signal and take up a position just left of the middle of the road.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  180: {
+    rule: 180,
+    title: 'Turning right: the gap',
+    summary:
+      'Wait until there is a safe gap between you and any oncoming vehicle, check mirrors and blind spot again, and do not cut the corner. Mirrors – Signal – Manoeuvre.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  182: {
+    rule: 182,
+    title: 'Turning left',
+    summary:
+      'Use your mirrors and give a left-turn signal well before you turn left, and watch for cyclists and others coming up on your left.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  183: {
+    rule: 183,
+    title: 'When turning',
+    summary:
+      'Keep as close to the left as is safe and practicable.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  238: {
+    rule: 238,
+    title: 'Yellow lines',
+    summary:
+      'You MUST NOT wait or park on yellow lines during the times of operation shown on nearby plates. Double yellow lines mean no waiting at any time.',
+    url: `${HC}/waiting-and-parking-238-to-252`
+  },
+  240: {
+    rule: 240,
+    title: 'Where you must not stop',
+    summary:
+      'You MUST NOT stop or park on a road marked with double white lines (except to pick up or set down passengers, or to load or unload), among other places.',
+    url: `${HC}/waiting-and-parking-238-to-252`
+  },
+  243: {
+    rule: 243,
+    title: 'Where not to stop or park',
+    summary:
+      'Do not stop or park opposite or within 10 metres of a junction (except in an authorised parking space), on a bend, or near the brow of a hill, among other places.',
+    url: `${HC}/waiting-and-parking-238-to-252`
   },
   126: {
     rule: 126,
