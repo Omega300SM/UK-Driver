@@ -17,7 +17,22 @@ export function setSoundEnabled(on: boolean): void {
   if (master) master.gain.value = on ? 0.6 : 0;
 }
 
+/**
+ * iOS treats web audio as "ambient" by default, so the ring/silent switch
+ * mutes it. Safari 16.4+ lets a page ask for "playback" instead, which plays
+ * like a video or music app would. Older iOS ignores this harmlessly.
+ */
+function preferPlaybackSession(): void {
+  try {
+    const nav = navigator as unknown as { audioSession?: { type: string } };
+    if (nav.audioSession && nav.audioSession.type !== 'playback') nav.audioSession.type = 'playback';
+  } catch {
+    /* not supported */
+  }
+}
+
 export function unlockAudio(): void {
+  preferPlaybackSession();
   try {
     if (!ctx) {
       const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -33,7 +48,8 @@ export function unlockAudio(): void {
       s.connect(master);
       s.start(0);
     }
-    if (ctx.state === 'suspended') void ctx.resume();
+    // iOS can also leave the context 'interrupted' after a call or backgrounding.
+    if (ctx.state !== 'running') void ctx.resume();
   } catch {
     /* audio is optional */
   }

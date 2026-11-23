@@ -1292,3 +1292,186 @@ body.needs-landscape #rotate {
     height: 100%;
   }
 }
+
+/* ==========================================================================
+   Drive HUD v2: one layout that scales from ~220px tall (Safari with its
+   toolbars showing) to full screen. Sizes key off viewport height.
+   ========================================================================== */
+.drive {
+  --pad: 8px;
+  --btn-h: clamp(32px, 12vh, 42px);
+  --wheel: clamp(92px, 40vh, 150px);
+  --accel-h: clamp(78px, 34vh, 118px);
+  --brake-h: clamp(54px, 23vh, 74px);
+  --row2: calc(var(--safe-t) + var(--pad) * 2 + var(--btn-h));
+}
+.drive .hud {
+  padding: 0;
+}
+.drive .hud-btn,
+.drive .gear button,
+.drive .ind {
+  height: var(--btn-h);
+  min-width: var(--btn-h);
+}
+.drive .hud .top-left {
+  left: calc(var(--safe-l) + var(--pad));
+  top: calc(var(--safe-t) + var(--pad));
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.drive .mirrors {
+  top: calc(var(--safe-t) + var(--pad));
+}
+.drive .mirror-btn,
+.drive .look-btn {
+  height: var(--btn-h);
+}
+.drive .speedo {
+  top: calc(var(--safe-t) + var(--pad));
+  right: calc(var(--safe-r) + var(--pad));
+  height: var(--btn-h);
+  padding: 0 6px 0 10px;
+}
+.drive .speedo .v {
+  font-size: clamp(20px, 8vh, 30px);
+  min-width: 32px;
+}
+.drive .speedo svg {
+  width: calc(var(--btn-h) - 6px);
+  height: calc(var(--btn-h) - 6px);
+  display: block;
+}
+.drive .tray {
+  position: absolute;
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  align-items: center;
+  top: var(--row2);
+}
+.drive .tray-right {
+  right: calc(var(--safe-r) + var(--pad));
+  left: auto;
+}
+.drive .tray-left {
+  left: calc(var(--safe-l) + var(--pad));
+  right: auto;
+}
+.drive .wheel {
+  left: calc(var(--safe-l) + var(--pad));
+  bottom: calc(var(--safe-b) + var(--pad));
+  width: var(--wheel);
+  height: var(--wheel);
+}
+.drive .stalk {
+  left: calc(var(--safe-l) + var(--pad) * 2 + var(--wheel));
+  bottom: calc(var(--safe-b) + var(--pad));
+  flex-direction: row;
+  gap: 6px;
+}
+.drive .ind {
+  width: 48px;
+}
+.drive .pedals {
+  right: calc(var(--safe-r) + var(--pad));
+  bottom: calc(var(--safe-b) + var(--pad));
+  gap: 10px;
+}
+.drive .pedal.brake {
+  width: 84px;
+  height: var(--brake-h);
+}
+.drive .pedal.accel {
+  width: 58px;
+  height: var(--accel-h);
+}
+.drive .hud .bubble-wrap {
+  transform: none;
+  left: calc(var(--safe-l) + var(--pad) * 3 + var(--wheel) + 102px);
+  right: calc(var(--safe-r) + var(--pad) * 2 + 152px);
+  width: auto;
+  bottom: calc(var(--safe-b) + var(--pad));
+  max-height: calc(100% - var(--row2) - var(--btn-h) - var(--pad) * 2);
+  overflow-y: auto;
+}
+.drive .hud .bubble-wrap svg {
+  width: clamp(30px, 12vh, 46px);
+  height: clamp(30px, 12vh, 46px);
+}
+.drive .mirror-inset {
+  top: var(--row2);
+}
+
+/* Very short screens (Safari toolbars in landscape on a small phone). */
+@media (max-height: 300px) {
+  .drive .hud .top-left .stage-tag {
+    display: none;
+  }
+  .drive .speedo .u {
+    display: none;
+  }
+  .drive .look-btn {
+    width: 44px;
+    font-size: 12px;
+  }
+  .drive .mirror-btn.interior {
+    width: 74px;
+  }
+  .drive .mirror-btn.side {
+    width: 40px;
+  }
+  .drive .hud .bubble {
+    font-size: 13px;
+    padding: 5px 9px;
+  }
+  .drive .hud .bubble .who {
+    display: none;
+  }
+}
+/* Narrow landscape (≤ 700px wide): stack the extras under the wheel row. */
+@media (max-width: 700px) {
+  .drive .tray-left .hud-btn {
+    min-width: 34px;
+    padding: 0 4px;
+  }
+}
+
+.fs-tip {
+  position: absolute;
+  left: 50%;
+  top: var(--row2);
+  transform: translateX(-50%);
+  background: rgba(20, 30, 25, 0.86);
+  color: #fff;
+  border-radius: 12px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  z-index: 4;
+  max-width: 60vw;
+}
+.fs-tip button {
+  color: var(--yellow);
+  font-weight: 900;
+}
+@media (max-width: 900px) {
+  .drive .hud .top-left .stage-tag {
+    display: none;
+  }
+}
+.lbl-short {
+  display: none;
+}
+@media (max-width: 760px) {
+  .drive .lbl-long {
+    display: none;
+  }
+  .drive .lbl-short {
+    display: inline;
+  }
+}

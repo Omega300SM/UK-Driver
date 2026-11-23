@@ -18,6 +18,7 @@ import { mph, type DriveEvent, type Fault, type Gear, type MirrorId, type Side, 
 import { SpeechBubble } from '../../instructor/bubble';
 import { SteeringWheel, Pedal } from '../../ui/hud/wheel';
 import { sfx, engineStart, engineStop, engineUpdate } from '../../platform/audio';
+import { isStandalone } from '../../platform/ios';
 import { requestMotionPermission, startTilt, stopTilt, tilt } from '../../platform/motion';
 import type { GuidedStep, Trigger } from '../../content/schema';
 
@@ -54,10 +55,24 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
   const accel = new Pedal('accel', 'GO', 0.22, 0.45);
   const brake = new Pedal('brake', 'BRAKE', 0.35, 1.4);
 
+  /**
+   * HUD buttons fire on touch-down, not click: on iOS a tap with one finger
+   * while another finger holds a pedal often never produces a click event.
+   */
+  const btn = (props: Record<string, unknown>, label: string | Node, fn: () => void) => {
+    const b = h('button', props, label) as HTMLButtonElement;
+    b.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      fn();
+    });
+    return b;
+  };
+
   const mirrorBtn = (which: MirrorId, label: string, cls: string) =>
-    h('button', { class: `mirror-btn ${cls}`, 'data-hud': `mirror-${which}`, 'aria-label': `Check ${which} mirror`, onclick: () => act.mirror(which) }, label);
+    btn({ class: `mirror-btn ${cls}`, 'data-hud': `mirror-${which}`, 'aria-label': `Check ${which} mirror` }, label, () => act.mirror(which));
   const lookBtn = (side: Side) =>
-    h('button', { class: 'look-btn', 'data-hud': `look-${side}`, 'aria-label': `Look over your ${side} shoulder`, onclick: () => act.shoulder(side) }, side === 'left' ? '👀↶' : '↷👀');
+    btn({ class: 'look-btn', 'data-hud': `look-${side}`, 'aria-label': `Look over your ${side} shoulder` }, side === 'left' ? '👀↶' : '↷👀', () => act.shoulder(side));
   const mirrors = h('div', { class: 'mirrors' }, lookBtn('left'), mirrorBtn('left', 'L', 'side'), mirrorBtn('interior', 'MIRROR', 'interior'), mirrorBtn('right', 'R', 'side'), lookBtn('right'));
   const inset = h('div', { class: 'mirror-inset' });
 
@@ -65,52 +80,48 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
   const limitEl = h('span');
   const speedo = h('div', { class: 'speedo', 'data-testid': 'speedo' }, speedV, h('span', { class: 'u' }, 'MPH'), limitEl);
 
-  const beltBtn = h('button', { class: 'hud-btn', 'data-hud': 'belt', onclick: () => act.belt() }, '🔗 Belt');
-  const hbBtn = h('button', { class: 'hud-btn', 'data-hud': 'handbrake', onclick: () => act.handbrake() }, '(P) Handbrake');
+  const beltBtn = btn({ class: 'hud-btn', 'data-hud': 'belt', 'data-testid': 'hud-belt' }, '🔗 Belt', () => act.belt());
+  const hbBtn = btn({ class: 'hud-btn', 'data-hud': 'handbrake', 'data-testid': 'hud-handbrake' }, 'Handbrake', () => act.handbrake());
   const gearBtns: Record<Gear, HTMLButtonElement> = { P: null!, R: null!, D: null! };
   const gearEl = h('div', { class: 'gear', 'data-hud': 'gear' });
   for (const g of ['P', 'R', 'D'] as Gear[]) {
-    gearBtns[g] = h('button', { 'aria-label': `Gear ${g}`, onclick: () => act.gear(g) }, g) as HTMLButtonElement;
+    gearBtns[g] = btn({ 'aria-label': `Gear ${g}`, 'data-testid': `hud-gear-${g}` }, g, () => act.gear(g));
     gearEl.append(gearBtns[g]);
   }
-  const lightsBtn = h('button', { class: 'hud-btn', 'aria-label': 'Headlights', onclick: () => act.lights() }, '💡');
-  const wipersBtn = h('button', { class: 'hud-btn', 'aria-label': 'Wipers', onclick: () => act.wipers() }, '🌧');
-  const hornBtn = h('button', { class: 'hud-btn', 'aria-label': 'Horn', onclick: () => act.horn() }, '📯');
-  const camBtn = h('button', { class: 'hud-btn', 'aria-label': 'Switch camera', onclick: () => act.camera() }, '🎥');
-  const tray = h('div', { class: 'tray' }, h('div', { class: 'tray-row' }, beltBtn, hbBtn), h('div', { class: 'tray-row' }, gearEl), h('div', { class: 'tray-row' }, lightsBtn, wipersBtn, hornBtn, camBtn));
+  const lightsBtn = btn({ class: 'hud-btn', 'aria-label': 'Headlights' }, '💡', () => act.lights());
+  const wipersBtn = btn({ class: 'hud-btn', 'aria-label': 'Wipers' }, '🌧', () => act.wipers());
+  const hornBtn = btn({ class: 'hud-btn', 'aria-label': 'Horn' }, '📯', () => act.horn());
+  const camBtn = btn({ class: 'hud-btn', 'aria-label': 'Switch camera' }, '🎥', () => act.camera());
+  // Car controls on the right (next to the pedals), extras on the left.
+  const trayRight = h('div', { class: 'tray tray-right' }, beltBtn, hbBtn, gearEl);
+  const trayLeft = h('div', { class: 'tray tray-left' }, lightsBtn, wipersBtn, hornBtn, camBtn);
 
-  const indL = h('button', { class: 'ind', 'aria-label': 'Indicate left', onclick: () => act.signal('left') }, '◀');
-  const indR = h('button', { class: 'ind', 'aria-label': 'Indicate right', onclick: () => act.signal('right') }, '▶');
-  const stalk = h('div', { class: 'stalk', 'data-hud': 'stalk' }, h('div', { class: 'row' }, indL, indR));
+  const indL = btn({ class: 'ind', 'aria-label': 'Indicate left', 'data-testid': 'hud-ind-left' }, '◀', () => act.signal('left'));
+  const indR = btn({ class: 'ind', 'aria-label': 'Indicate right', 'data-testid': 'hud-ind-right' }, '▶', () => act.signal('right'));
+  const stalk = h('div', { class: 'stalk', 'data-hud': 'stalk' }, indL, indR);
   const pedals = h('div', { class: 'pedals' }, brake.el, accel.el);
 
   const stageTag = h('div', { class: 'stage-tag' }, `Day ${lesson.day} · ${stageLabel(mode)}`);
-  const quitBtn = h('button', { class: 'hud-btn', 'aria-label': 'Leave lesson', onclick: () => goHome() }, '✕');
-  const topLeft = h('div', { class: 'top-left' }, h('div', { class: 'tray-row' }, quitBtn, stageTag));
-  hud.append(topLeft, mirrors, inset, speedo, tray, wheel.el, stalk, pedals, bubble.el);
-
-  const actions = h('div', { class: 'tray-row' });
-  topLeft.append(actions);
+  const quitBtn = btn({ class: 'hud-btn', 'aria-label': 'Leave lesson' }, '✕', () => goHome());
+  const topLeft = h('div', { class: 'top-left' }, quitBtn);
   if (mode === 'free') {
     let hi = 0;
-    actions.append(
-      h(
-        'button',
-        {
-          class: 'hud-btn',
-          'data-testid': 'hint',
-          onclick: () => {
-            sfx.tap();
-            bubble.say(lesson.free.hints[hi++ % lesson.free.hints.length], 'happy', settings.voice);
-          }
-        },
-        '💡 Hint'
-      )
+    topLeft.append(
+      btn({ class: 'hud-btn', 'data-testid': 'hint', 'aria-label': 'Hint' }, h('span', {}, '💡', h('span', { class: 'lbl-long' }, ' Hint')), () => {
+        sfx.tap();
+        bubble.say(lesson.free.hints[hi++ % lesson.free.hints.length], 'happy', settings.voice);
+      })
     );
   }
-  if (mode !== 'test') {
-    actions.append(h('button', { class: 'hud-btn', 'data-testid': 'drive-finish', onclick: () => finishStage() }, mode === 'free' ? 'Ready for my test ›' : 'Skip ›'));
-  }
+  if (mode !== 'test') topLeft.append(
+      btn(
+        { class: 'hud-btn', 'data-testid': 'drive-finish' },
+        mode === 'free' ? h('span', {}, h('span', { class: 'lbl-long' }, 'Ready for test ›'), h('span', { class: 'lbl-short' }, 'Test ›')) : 'Skip ›',
+        () => finishStage()
+      )
+    );
+  topLeft.append(stageTag);
+  hud.append(topLeft, mirrors, inset, speedo, trayLeft, trayRight, wheel.el, stalk, pedals, bubble.el);
 
   // ---------- World ----------
   const renderer = new Renderer(canvas, settings.lowPower);
@@ -269,7 +280,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     beltBtn.classList.toggle('warn', !belt);
     beltBtn.textContent = belt ? '🔗 Belt on' : '⚠ Belt off';
     hbBtn.classList.toggle('on', car.handbrake);
-    hbBtn.textContent = car.handbrake ? '(P) Handbrake on' : 'Handbrake off';
+    hbBtn.textContent = car.handbrake ? 'Handbrake ON' : 'Handbrake off';
     for (const g of ['P', 'R', 'D'] as Gear[]) gearBtns[g].classList.toggle('on', car.gear === g);
     indL.classList.toggle('on', signal === 'left');
     indR.classList.toggle('on', signal === 'right');
@@ -785,7 +796,34 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
   (window as unknown as { __drive?: typeof hooks }).__drive = hooks;
 
   // ---------- Lifecycle ----------
+  const maybeFullscreenTip = () => {
+    const KEY = 'drive-england.fsTipSeen';
+    let seen = false;
+    try {
+      seen = localStorage.getItem(KEY) === '1';
+    } catch {
+      /* ignore */
+    }
+    if (seen || isStandalone() || window.innerHeight >= 340 || app.e2e) return;
+    const tip = h(
+      'div',
+      { class: 'fs-tip', role: 'note' },
+      'Tip: Share → Add to Home Screen gives you full-screen driving.',
+      btn({ 'aria-label': 'Dismiss tip' }, 'OK', () => {
+        try {
+          localStorage.setItem(KEY, '1');
+        } catch {
+          /* ignore */
+        }
+        tip.remove();
+      })
+    );
+    hud.append(tip);
+    setTimeout(() => tip.remove(), 9000);
+  };
+
   const startDrive = () => {
+    maybeFullscreenTip();
     refreshHud();
     renderer.resize();
     if (settings.lineHints && HINT_PATHS[mode].length) world.setHintPath(HINT_PATHS[mode]);

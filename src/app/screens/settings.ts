@@ -4,7 +4,8 @@ import type { Settings } from '../../scoring/progress';
 import { newSave } from '../../scoring/progress';
 import { DISCLAIMERS } from '../../content/disclaimers';
 import { requestMotionPermission, startTilt, stopTilt } from '../../platform/motion';
-import { hasEnGbVoice, speak } from '../../platform/speech';
+import { hasEnGbVoice, speak, speechSupported, unlockSpeech, voiceName } from '../../platform/speech';
+import { unlockAudio } from '../../platform/audio';
 import { sfx } from '../../platform/audio';
 import { toast } from './common';
 import { goOnboarding } from '../nav';
@@ -41,7 +42,32 @@ export function settingsScreen(back: () => void): Screen {
       toggle('voice', 'Maggie’s voice', hasEnGbVoice() ? 'Spoken with a British English voice. Subtitles always show.' : 'Uses your device’s voice. Subtitles always show.', (v) => {
         if (v) setTimeout(() => speak('Lovely, you can hear me now.'), 50);
       }),
-      toggle('sound', 'Sound effects', 'Engine, indicator ticks, chimes.')
+      toggle('sound', 'Sound effects', 'Engine, indicator ticks, chimes.'),
+      h(
+        'div',
+        { class: 'row' },
+        h(
+          'div',
+          {},
+          h('b', {}, 'Test Maggie’s voice'),
+          h('small', {}, speechSupported() ? `Voice: ${voiceName() ?? 'device default'}. No sound? Check the volume buttons and that voice is on above.` : 'This browser has no speech support. Subtitles still show everything.')
+        ),
+        h(
+          'button',
+          {
+            class: 'btn small',
+            'data-testid': 'test-voice',
+            onclick: () => {
+              unlockAudio();
+              unlockSpeech();
+              sfx.good();
+              if (!app.save.settings.voice) setSetting('voice', true);
+              speak('Right then. If you can hear me, we’re all set. Lovely.');
+            }
+          },
+          '▶ Play'
+        )
+      )
     ),
     h(
       'div',

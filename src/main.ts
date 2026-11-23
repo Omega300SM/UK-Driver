@@ -10,13 +10,19 @@ installIosShell();
 initSpeech();
 applySettings();
 
-// iOS only allows audio/speech after a user gesture: unlock on the first touch anywhere.
-const firstGesture = () => {
-  unlockAudio();
-  unlockSpeech();
-  window.removeEventListener('pointerdown', firstGesture, true);
-};
-window.addEventListener('pointerdown', firstGesture, true);
+// iOS only allows audio/speech after a user gesture. WebKit counts touchend
+// and click (not always pointerdown) as gestures, so listen to all of them, on
+// every tap: unlocking is idempotent, and iOS can re-suspend audio after a call.
+for (const ev of ['pointerdown', 'touchend', 'click', 'keydown']) {
+  window.addEventListener(
+    ev,
+    () => {
+      unlockAudio();
+      unlockSpeech();
+    },
+    { capture: true, passive: true }
+  );
+}
 
 if (app.save.onboarded) goHome();
 else goOnboarding();

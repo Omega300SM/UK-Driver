@@ -83,7 +83,7 @@ export const day01: LessonContent = {
   },
 
   free: {
-    intro: 'Have a little practice on your own. Move off, potter about, stop, and move off again. I won’t mark anything, I’ll just pipe up if I spot something. Tap “Ready for my test” when you’re happy.',
+    intro: 'Have a little practice on your own. Move off, potter about, stop, and move off again. I won’t mark anything, I’ll just pipe up if I spot something. Tap the Test button at the top when you’re happy.',
     hints: [
       'Before you move off: mirrors, blind spot, signal if it helps anyone. Rule 159.',
       'Check your mirror before you signal, not after. Rule 161.',
