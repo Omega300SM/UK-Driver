@@ -41,6 +41,6 @@ export class Autopilot {
     const target = wp.v === 0 ? Math.min(4, dist * 0.6) : wp.v;
     const dv = target - car.speed;
     if (wp.v === 0 && dist < 1.5) return { throttle: 0, brake: 0.5, steer };
-    return { throttle: dv > 0 ? Math.min(1, dv * 0.6) : 0, brake: dv < -0.5 ? Math.min(0.6, -dv * 0.12) : 0, steer };
+    return { throttle: dv > 0 ? Math.min(1, dv * 0.6) : 0, brake: dv < -0.5 ? Math.min(0.45, -dv * 0.1) : 0, steer };
   }
 }

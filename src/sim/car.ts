@@ -1,5 +1,5 @@
 import type { Gear } from '../rules/types';
-import { inRect, type SceneLayout } from '../world/scenes/carParkLayout';
+import { inRect, type Obstacle, type SceneLayout } from '../world/layout';
 
 export interface CarInput {
   throttle: number; // 0..1
@@ -73,7 +73,7 @@ export class Car {
     return out;
   }
 
-  step(dt: number, input: CarInput, layout: SceneLayout): StepResult {
+  step(dt: number, input: CarInput, layout: SceneLayout, moving: Obstacle[] = []): StepResult {
     const res: StepResult = {};
     const v0 = this.speed;
 
@@ -94,7 +94,7 @@ export class Car {
       if (this.handbrake) drive *= 0.12;
       if (this.gear === 'R' && v < -3) drive = 0;
       v += dir * drive * dt;
-      v = toward(v, 0, (0.12 + 0.012 * v * v) * dt);
+      v = toward(v, 0, (0.12 + 0.0035 * v * v) * dt);
       v = toward(v, 0, (input.brake * 8.5 + (this.handbrake ? 4 : 0)) * dt);
     }
     v = Math.max(-4, Math.min(32, v));
@@ -105,7 +105,7 @@ export class Car {
     const nx = this.x + Math.sin(nh) * v * dt;
     const nz = this.z + Math.cos(nh) * v * dt;
 
-    const hit = this.collide(nx, nz, nh, layout);
+    const hit = this.collide(nx, nz, nh, layout, moving);
     if (hit) {
       if (hit === 'kerb') res.kerb = v;
       else res.collision = { speed: v, what: hit };
@@ -122,12 +122,12 @@ export class Car {
     return res;
   }
 
-  private collide(x: number, z: number, h: number, layout: SceneLayout): 'kerb' | string | null {
+  private collide(x: number, z: number, h: number, layout: SceneLayout, moving: Obstacle[]): 'kerb' | string | null {
     const pts = this.corners(x, z, h);
     for (const [px, pz] of pts) {
       if (!layout.drivable.some((r) => inRect(r, px, pz))) return 'kerb';
     }
-    for (const o of layout.obstacles) {
+    for (const o of moving.length ? [...layout.obstacles, ...moving] : layout.obstacles) {
       for (const [px, pz] of pts) if (inRect(o, px, pz)) return o.kind;
       // Obstacle corners inside the car (catches small posts between our sample points).
       const oc: Array<[number, number]> = [
