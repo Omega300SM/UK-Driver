@@ -1,0 +1,27 @@
+{
+  "name": "drive-england",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Drive England: 30 Days to Expert — a mobile-first driving lesson game for English roads.",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host --port 4173",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/three": "0.180.0",
+    "typescript": "5.9.3",
+    "vite": "7.3.8",
+    "vite-plugin-pwa": "1.3.0",
+    "vitest": "4.1.12"
+  }
+}
