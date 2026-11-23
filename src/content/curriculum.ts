@@ -1,5 +1,11 @@
 import type { CurriculumDay, WorldInfo, LessonContent } from './schema';
 import { day01 } from './lessons/day01';
+import { day02 } from './lessons/day02';
+import { day03 } from './lessons/day03';
+import { day04 } from './lessons/day04';
+import { day05 } from './lessons/day05';
+import { day06 } from './lessons/day06';
+import { day07 } from './lessons/day07';
 
 export const WORLDS: WorldInfo[] = [
   { id: 1, name: 'Foundations', tagline: 'Controls, the left, signs and junctions', pin: { x: 112, y: 172 }, place: 'Little Ashby, Leicestershire' },
@@ -41,7 +47,7 @@ const titles: Array<[number, 1 | 2 | 3 | 4, string, boolean?]> = [
   [30, 4, 'Graduation']
 ];
 
-const LESSONS: Record<number, LessonContent> = { 1: day01 };
+const LESSONS: Record<number, LessonContent> = { 1: day01, 2: day02, 3: day03, 4: day04, 5: day05, 6: day06, 7: day07 };
 
 export const CURRICULUM: CurriculumDay[] = titles.map(([day, world, title, boss]) => ({
   day,
