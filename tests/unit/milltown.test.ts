@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { MILL_TOWN, R1, R2, M1, roundaboutPath } from '../../src/world/scenes/millTownLayout';
 import { Traffic, pathLength, pointAt } from '../../src/sim/traffic';
+import { StreetControl } from '../../src/sim/street';
 import { isDrivable, circulationHeading, polarAngle } from '../../src/world/layout';
 import { angleDiff } from '../../src/rules/checks';
 
@@ -53,10 +54,13 @@ describe('Mill Town geometry', () => {
 describe('Mill Town AI traffic', () => {
   it('flows for two minutes without overlapping or gridlocking, and uses the roundabouts', () => {
     const tr = new Traffic(MILL_TOWN, 'busy');
+    const st = new StreetControl(MILL_TOWN, 'busy');
+    tr.street = st;
     let overlaps = 0;
     let visitedRb = 0;
     const moved = new Map<number, number>();
     for (let i = 0; i < 120 * 30; i++) {
+      st.update(1 / 30, tr.cars, farAway);
       tr.update(1 / 30, farAway);
       for (const c of tr.cars) {
         moved.set(c.id, (moved.get(c.id) ?? 0) + c.speed / 30);
@@ -67,7 +71,10 @@ describe('Mill Town AI traffic', () => {
           for (let b = a + 1; b < tr.cars.length; b++) {
             const A = tr.cars[a];
             const B = tr.cars[b];
-            if (Math.hypot(A.x - B.x, A.z - B.z) < 2.6) overlaps++;
+            if (Math.hypot(A.x - B.x, A.z - B.z) < 2.6) {
+              overlaps++;
+              if (overlaps < 4) console.log('overlap', i, A.path?.id, A.x.toFixed(1), A.z.toFixed(1), B.path?.id, B.x.toFixed(1), B.z.toFixed(1));
+            }
           }
       }
     }

@@ -2,6 +2,7 @@ import type { AiPath, Obstacle, SceneLayout } from '../world/layout';
 import { inRect, isDrivable, speedLimitAt } from '../world/layout';
 import type { ScriptedCar, TrafficLevel } from '../content/schema';
 import { MPH_PER_MPS } from '../rules/types';
+import type { StreetControl } from './street';
 
 export interface AiCar {
   id: number;
@@ -53,6 +54,8 @@ export class Traffic {
   private rnd: () => number = Math.random;
   /** Number of path cars to keep on the map. */
   private target = 0;
+  /** Signals and crossings, when the scene has them. */
+  street: StreetControl | null = null;
 
   constructor(
     private layout: SceneLayout,
@@ -162,9 +165,21 @@ export class Traffic {
     void fx;
     void fz;
 
-    // Give way at a roundabout entry (rule 185): wait if anyone will reach the merge point soon.
+    // Traffic lights and crossings: stop at the line when told to.
+    if (this.street) {
+      for (const { line, along } of this.street.linesAhead(c, 40)) {
+        const front = along - LEN / 2;
+        if (front < -0.5) continue;
+        if (this.street.mustStop(line, front, c.speed)) {
+          gap = Math.min(gap, Math.max(0, front - 0.6));
+          break;
+        }
+      }
+    }
+
+    // Give way at a roundabout entry (rule 185) or when joining a main road: wait if anyone will reach the merge point soon.
     c.waiting = false;
-    if (rb && (c.s ?? 0) < 1.0) {
+    if ((rb || path.giveWay) && (c.s ?? 0) < 1.0) {
       const merge = pointAt(path, Math.min(6, pathLength(path) / 3));
       let clash = false;
       for (const o of this.cars) {
@@ -179,8 +194,8 @@ export class Traffic {
         const pfz = Math.cos(player.heading);
         const along = (merge.x - player.x) * pfx + (merge.z - player.z) * pfz;
         const across = Math.abs((merge.x - player.x) * pfz - (merge.z - player.z) * pfx);
-        const onRb = Math.hypot(player.x - rb.x, player.z - rb.z) < rb.outer + 2;
-        if (onRb && along > 0 && across < 4 && along / Math.max(Math.abs(player.speed), 2) < 3) clash = true;
+        const near = rb ? Math.hypot(player.x - rb.x, player.z - rb.z) < rb.outer + 2 : Math.abs(player.speed) > 0.3 && along < 40;
+        if (near && along > 0 && across < 4 && along / Math.max(Math.abs(player.speed), 2) < 3) clash = true;
       }
       if (clash) {
         c.waiting = true;
@@ -215,6 +230,15 @@ export class Traffic {
     c.x = pos.x;
     c.z = pos.z;
     c.heading = pos.heading;
+  }
+
+  /** True for a path car approaching (or waiting at) a give way it will obey: it won't pull out in front of you. */
+  willGiveWay(c: AiCar): boolean {
+    if (!c.path) return false;
+    const yields = (p: AiPath) => !!(p.giveWay || p.yieldTo);
+    if (yields(c.path) && (c.s ?? 0) < 1) return true;
+    const next = this.nextPaths(c.path);
+    return pathLength(c.path) - (c.s ?? 0) < 40 && next.length > 0 && next.every(yields);
   }
 
   private nextCache = new Map<string, AiPath[]>();

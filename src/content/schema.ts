@@ -89,6 +89,7 @@ export type Trigger =
   | `zone.${string}`
   | `rbEnter.${string}`
   | `rbExit.${string}`
+  | `line.${string}`
   | `marker.${string}`
   | `stoppedAt.${string}`;
 

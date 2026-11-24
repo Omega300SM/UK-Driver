@@ -1,6 +1,7 @@
 import type { Car } from './car';
 import type { Traffic } from './traffic';
 import type { Recorder } from '../rules/recorder';
+import type { StreetControl } from './street';
 import type { DriveEvent, SignalState } from '../rules/types';
 import { mph } from '../rules/types';
 import { angleDiff } from '../rules/checks';
@@ -21,6 +22,9 @@ export class RoadAnalyser {
     private traffic: Traffic,
     private recorder: Recorder
   ) {}
+
+  /** Signals and crossings, when the scene has them. */
+  street: StreetControl | null = null;
 
   // ---------- Each tick: situation facts for the rules ----------
   situation(t: number, limit: number, o: { pullingUp: boolean; movedOffAt: number }) {
@@ -56,7 +60,10 @@ export class RoadAnalyser {
       const across = Math.abs(dx * rx + dz * rz);
       return along > 0 && along < 45 && across < 2.5 && Math.cos(c.heading - car.heading) > 0.5;
     });
-    const nearJunction = (L.junctions ?? []).some((j) => inRect(grow(j.box, 35), car.x, car.z)) || !!roundaboutAt(L, car.x, car.z, 40);
+    const nearJunction =
+      (L.junctions ?? []).some((j) => inRect(grow(j.box, 35), car.x, car.z)) ||
+      !!roundaboutAt(L, car.x, car.z, 40) ||
+      (L.stopLines ?? []).some((l) => Math.hypot(l.x - car.x, l.z - car.z) < 35);
     const nearParked = L.obstacles.some((ob) => (ob.kind === 'car' || ob.kind === 'van') && Math.hypot((ob.x0 + ob.x1) / 2 - car.x, (ob.z0 + ob.z1) / 2 - car.z) < 30);
     if (passingObstruction || nearParked) clearAhead = false;
     const undulySlow = v > 1 && v < limit * 0.4 && clearAhead && !nearJunction && !o.pullingUp && t - o.movedOffAt > 12;
@@ -74,7 +81,8 @@ export class RoadAnalyser {
       if (car.corners().some(([px, pz]) => distTo(m, px, pz) < m.island - 0.2)) onMiniCentre = m.id;
     }
     const onRoundabout = !!roundaboutAt(L, car.x, car.z, 18);
-    return { passingObstruction, clearance, oncomingM, inDoubleWhite, inNoEntry, undulySlow, rbWrongWay, onMiniCentre, onRoundabout };
+    const inBusLane = Math.abs(car.speed) > 1 && (L.busLanes ?? []).some((b) => inRect(b, car.x, car.z) && Math.cos(car.heading - b.heading) > 0.5);
+    return { passingObstruction, clearance, oncomingM, inDoubleWhite, inNoEntry, undulySlow, rbWrongWay, onMiniCentre, onRoundabout, inBusLane };
   }
 
   // ---------- Junction give way / stop lines ----------
@@ -119,6 +127,8 @@ export class RoadAnalyser {
       const j = junctionBoxAt(L, p.x, p.z);
       if (!j) continue;
       for (const c of traffic.cars) {
+        // A car waiting at its own give way line or lights isn't coming (AI waits for you).
+        if (c.waiting || c.speed < 0.5 || traffic.willGiveWay(c)) continue;
         if (Math.abs(Math.cos(c.heading - car.heading)) > 0.75 && Math.cos(c.heading - car.heading) > 0) continue;
         const cfx = Math.sin(c.heading);
         const cfz = Math.cos(c.heading);
@@ -201,6 +211,79 @@ export class RoadAnalyser {
     emit({ type: 'turn', t, dir: turnDh > 0 ? 'left' : 'right', startT: startF.t, signalAtStart: startF.signal });
   }
 
+  // ---------- Signals, crossings and box junctions ----------
+  private stopState = new Map<string, { before: boolean; amberAt: { dist: number; speed: number } | null; lastAspect: string | null }>();
+  private blocked = new Set<string>();
+  private boxStill = 0;
+  private boxFlagged = false;
+  streetEvents(t: number, dt: number, signal: SignalState, emit: Emit): void {
+    const { L, car, street } = this;
+    if (!street) return;
+    const [fx, fz] = car.forward;
+    const front = { x: car.x + fx * 2.05, z: car.z + fz * 2.05 };
+    for (const line of L.stopLines ?? []) {
+      const ax = Math.sin(line.heading);
+      const az = Math.cos(line.heading);
+      const sAlong = (front.x - line.x) * ax + (front.z - line.z) * az;
+      const lateral = Math.abs((front.x - line.x) * az - (front.z - line.z) * ax);
+      const aligned = Math.cos(car.heading - line.heading) > 0.5;
+      const st = this.stopState.get(line.id) ?? { before: false, amberAt: null, lastAspect: null };
+      const aspect = street.aspectAt(line);
+      if (aligned && lateral < 2.4 && sAlong < 0 && sAlong > -70) {
+        // Approaching: note where we were when the lights turned amber.
+        if (aspect === 'amber' && st.lastAspect !== 'amber') st.amberAt = { dist: -sAlong, speed: Math.abs(car.speed) };
+        if (aspect !== 'amber') st.amberAt = null;
+        st.before = true;
+      } else if (st.before && sAlong >= 0 && lateral < 3) {
+        const cr = street.crossing(line.crossing);
+        const on = cr ? street.pedsOn(cr.id) : [];
+        // Someone in our half of the road, or within a few metres of the car's line.
+        const pedInPath = on.some((p) => {
+          const dx = p.x - car.x;
+          const dz = p.z - car.z;
+          const across = Math.abs(dx * fz - dz * fx);
+          return across < 3.2;
+        });
+        emit({
+          type: 'stopLine',
+          t,
+          line: line.id,
+          kind: cr ? cr.kind : 'signals',
+          aspect,
+          amberAt: aspect === 'amber' ? st.amberAt : null,
+          pedsOn: on.length,
+          pedInPath,
+          pedWaiting: cr?.kind === 'zebra' ? street.pedWaiting(cr.id) : false
+        });
+        st.before = false;
+        st.amberAt = null;
+      } else if (sAlong < -70 || lateral > 5 || !aligned) {
+        st.before = false;
+        st.amberAt = null;
+      }
+      st.lastAspect = aspect;
+      this.stopState.set(line.id, st);
+    }
+
+    const still = Math.abs(car.speed) < 0.1;
+    // Waiting on a crossing (rule 192).
+    for (const cr of L.crossings ?? []) {
+      const on = still && car.corners().some(([px, pz]) => inRect(cr.area, px, pz));
+      if (on && !this.blocked.has(cr.id)) {
+        this.blocked.add(cr.id);
+        emit({ type: 'blockCrossing', t, crossing: cr.id });
+      } else if (!on && !still) this.blocked.delete(cr.id);
+    }
+    // Waiting in a box junction (rule 174).
+    const box = (L.boxes ?? []).find((b) => inRect(b, car.x, car.z));
+    this.boxStill = box && still ? this.boxStill + dt : 0;
+    if (!box) this.boxFlagged = false;
+    if (box && this.boxStill > 1.5 && !this.boxFlagged) {
+      this.boxFlagged = true;
+      emit({ type: 'boxStop', t, box: box.id, signal });
+    }
+  }
+
   // ---------- Where the car is pulled up ----------
   pullUpInfo() {
     const { L, car } = this;
@@ -208,7 +291,8 @@ export class RoadAnalyser {
     const near: Rect[] = [
       ...(L.junctions ?? []).map((j) => j.box),
       ...(L.noEntry ?? []),
-      ...(L.roundabouts ?? []).map((r) => ({ x0: r.x - r.outer, x1: r.x + r.outer, z0: r.z - r.outer, z1: r.z + r.outer }))
+      ...(L.roundabouts ?? []).map((r) => ({ x0: r.x - r.outer, x1: r.x + r.outer, z0: r.z - r.outer, z1: r.z + r.outer })),
+      ...(L.boxes ?? [])
     ];
     let nearJunctionM: number | null = null;
     for (const r of near) {
@@ -228,7 +312,9 @@ export class RoadAnalyser {
       if (lane.axis === 'x') kerbGap = fx > 0 ? car.z - w - (lane.centre - half) : lane.centre + half - (car.z + w);
       else kerbGap = fz > 0 ? lane.centre + half - (car.x + w) : car.x - w - (lane.centre - half);
     }
-    return { onYellow, nearJunctionM, onDoubleWhite, kerbGap };
+    const onZigzag = (L.crossings ?? []).some((c) => [c.area, ...c.zigzag].some((r) => car.corners().some(([px, pz]) => inRect(r, px, pz))));
+    const inBusLane = (L.busLanes ?? []).some((b) => inRect(b, car.x, car.z));
+    return { onYellow, nearJunctionM, onDoubleWhite, kerbGap, onZigzag, inBusLane };
   }
 }
 

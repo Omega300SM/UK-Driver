@@ -258,6 +258,66 @@ export const FAULTS = {
     message: 'We drove over the painted centre of the mini-roundabout. You MUST pass round the central markings.',
     rules: [188]
   },
+  'red-light': {
+    severity: 'serious',
+    category: 'Response to signals – traffic lights',
+    message: 'We crossed the stop line on a red light. Red, and red with amber, both mean stop. Wait behind the line for green.',
+    rules: [175, 176]
+  },
+  'amber-light': {
+    severity: 'minor',
+    category: 'Response to signals – traffic lights',
+    message: 'The lights turned amber with plenty of room to stop, and we carried on. Amber means stop, unless you’re so close that stopping might cause a collision.',
+    rules: [175]
+  },
+  'zebra-give-way': {
+    severity: 'serious',
+    category: 'Pedestrian crossings',
+    message: 'Someone had stepped onto the zebra crossing and we didn’t stop. You MUST give way once a pedestrian is on the crossing.',
+    rules: [195]
+  },
+  'zebra-waiting': {
+    severity: 'minor',
+    category: 'Pedestrian crossings',
+    message: 'Somebody was waiting at the zebra and we drove on. Look out for people waiting, and be ready to slow down and let them cross.',
+    rules: [195]
+  },
+  'crossing-ped': {
+    severity: 'serious',
+    category: 'Pedestrian crossings',
+    message: 'There was still someone on the crossing when we drove over it. Give way to anyone still crossing, even if your light is green.',
+    rules: [196, 198]
+  },
+  'crossing-ped-dangerous': {
+    severity: 'dangerous',
+    category: 'Pedestrian crossings',
+    message: 'We drove across right where someone was walking. I had to step in there: that’s the most vulnerable person on the road.',
+    rules: [195, 198]
+  },
+  'crossing-blocked': {
+    severity: 'minor',
+    category: 'Pedestrian crossings',
+    message: 'We stopped on the crossing in the queue. Keep crossings clear: only go onto one if you can get right across.',
+    rules: [192]
+  },
+  'box-junction': {
+    severity: 'serious',
+    category: 'Junctions – box junction',
+    message: 'We stopped in the yellow box. You MUST NOT enter the box until your exit is clear, unless you’re turning right and only oncoming traffic is stopping you.',
+    rules: [174]
+  },
+  'bus-lane': {
+    severity: 'minor',
+    category: 'Positioning – lane discipline',
+    message: 'We drove along the bus lane while it was in operation. Keep out of bus lanes during their hours, unless the signs say you may use them.',
+    rules: [141]
+  },
+  'park-zigzag': {
+    severity: 'serious',
+    category: 'Normal stops',
+    message: 'We stopped on the zig-zag lines by the crossing. You MUST NOT stop or park there: it hides people crossing.',
+    rules: [191, 240]
+  },
   'not-secured': {
     severity: 'minor',
     category: 'Control – securing the car',

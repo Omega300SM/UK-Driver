@@ -3,7 +3,7 @@ import type { RuleRef } from './schema';
 const HC = 'https://www.gov.uk/guidance/the-highway-code';
 
 /**
- * Highway Code references. Text paraphrased from gov.uk, checked 23–24 Nov 2026 (Days 1–9).
+ * Highway Code references. Text paraphrased from gov.uk, checked 23–24 Nov 2026 (Days 1–11).
  * Add new rules here and cite them by number from lessons and faults.
  */
 export const RULES: Record<number, RuleRef> = {
@@ -157,7 +157,7 @@ export const RULES: Record<number, RuleRef> = {
     rule: 240,
     title: 'Where you must not stop',
     summary:
-      'You MUST NOT stop or park on a road marked with double white lines (except to pick up or set down passengers, or to load or unload), among other places.',
+      'You MUST NOT stop or park on a pedestrian crossing or its zig-zag lines, or on a road marked with double white lines (except to pick up or set down passengers, or to load or unload), among other places.',
     url: `${HC}/waiting-and-parking-238-to-252`
   },
   243: {
@@ -166,6 +166,94 @@ export const RULES: Record<number, RuleRef> = {
     summary:
       'Do not stop or park opposite or within 10 metres of a junction (except in an authorised parking space), on a bend, or near the brow of a hill, among other places.',
     url: `${HC}/waiting-and-parking-238-to-252`
+  },
+  141: {
+    rule: 141,
+    title: 'Bus lanes',
+    summary:
+      'Shown by road markings and signs that say which other vehicles (if any) may use them. Unless otherwise indicated, do not drive in a bus lane during its period of operation. You may enter one to stop, load or unload where that is not prohibited.',
+    url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
+  },
+  174: {
+    rule: 174,
+    title: 'Box junctions',
+    summary:
+      'You MUST NOT enter the yellow criss-cross box until your exit road or lane is clear. You may enter and wait when turning right and only stopped by oncoming traffic or others waiting to turn right.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  175: {
+    rule: 175,
+    title: 'Traffic lights: the stop line',
+    summary:
+      'You MUST stop behind the white stop line unless the light is green. On amber, go on only if you have already crossed the line or are so close that stopping might cause a collision.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  176: {
+    rule: 176,
+    title: 'Traffic lights: red',
+    summary:
+      'You MUST NOT move over the white line on red. Go on green only if there is room to clear the junction safely (or you are positioning to turn right). Red and amber also means stop.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  177: {
+    rule: 177,
+    title: 'Green filter arrow',
+    summary:
+      'A filter lane only: do not enter it unless you want to go in the direction of the arrow. Go when the arrow or the full green shows, giving others (especially cyclists) time and room.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  178: {
+    rule: 178,
+    title: 'Advanced stop lines',
+    summary:
+      'At amber or red you MUST stop at the first white line, leaving the marked area for cyclists. If you were already over the first line when the light turned red, stop at the second.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  191: {
+    rule: 191,
+    title: 'Pedestrian crossings',
+    summary:
+      'You MUST NOT park on a crossing or its zig-zag area, and MUST NOT overtake the moving vehicle nearest the crossing or one that has stopped to give way to pedestrians.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  192: {
+    rule: 192,
+    title: 'Keep crossings clear',
+    summary: 'In queuing traffic keep crossings completely clear, and do not go onto a crossing unless you can get right across it.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  194: {
+    rule: 194,
+    title: 'Be patient with pedestrians',
+    summary: 'Allow pedestrians plenty of time to cross and do not harass them by revving your engine or edging forward.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  195: {
+    rule: 195,
+    title: 'Zebra crossings',
+    summary:
+      'Look out for people waiting and be ready to stop; you should give way to pedestrians waiting to cross, and you MUST give way once one has moved onto the crossing. Do not wave people across, flash your lights or use your horn.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  196: {
+    rule: 196,
+    title: 'Pelican crossings',
+    summary:
+      'Signal-controlled crossings where flashing amber follows red. You MUST stop on red; on flashing amber you MUST give way to anyone on the crossing, and may go with caution if it is clear.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  198: {
+    rule: 198,
+    title: 'Anyone still crossing',
+    summary: 'Give way to anyone still crossing after the signal for vehicles has changed to green. This applies to all crossings.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  199: {
+    rule: 199,
+    title: 'Toucan, puffin and equestrian crossings',
+    summary:
+      'Like pelicans but with no flashing amber: the lights run as at traffic lights. Do not go onto the crossing unless you can clear it completely.',
+    url: `${HC}/using-the-road-159-to-203`
   },
   184: {
     rule: 184,

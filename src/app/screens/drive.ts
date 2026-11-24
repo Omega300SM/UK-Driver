@@ -12,6 +12,7 @@ import { speedRoundelSvg } from '../../world/signs';
 import { signSvg } from '../../world/signSvg';
 import { Car } from '../../sim/car';
 import { Autopilot, type Waypoint } from '../../sim/autopilot';
+import { StreetControl } from '../../sim/street';
 import { RulesEngine } from '../../rules/RulesEngine';
 import { day1Checks, angleDiff } from '../../rules/checks';
 import { townChecks } from '../../rules/checks/town';
@@ -183,6 +184,9 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
   const rules = new RulesEngine(lesson.checks === 'millTown' ? millTownChecks() : town ? townChecks() : day1Checks(), mode === 'test' ? 'test' : 'coach');
   const recorder = new Recorder();
   const traffic = new Traffic(L, setup.traffic ?? 'none', setup.scripted ?? []);
+  // Traffic lights, crossings and pedestrians (Week 2 onwards).
+  const street = L.signals?.length || L.crossings?.length ? new StreetControl(L, setup.traffic ?? 'none') : null;
+  traffic.street = street;
   let t = 0;
   // Day 1 teaches the belt in the guided drive; later lessons start belted except for the test.
   let belt = mode === 'free' || (mode === 'guided' && lesson.day > 1);
@@ -390,6 +394,8 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
         return `rbExit.${ev.rb}`;
       case 'rbEnter':
         return `rbEnter.${ev.rb}`;
+      case 'stopLine':
+        return `line.${ev.line}`;
       default:
         return ev.type;
     }
@@ -432,6 +438,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
       case 'turned':
       case 'rbEnter':
       case 'rbExit':
+      case 'line':
         return stepEvents.has(trig);
       case 'look':
         return stepEvents.has(`shoulder.${arg}`);
@@ -556,6 +563,22 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
           const across = Math.abs(dx * afz - dz * afx);
           if (along > 0 && along < 40 && across < 2.2) gap = Math.min(gap, along - 4.2);
         }
+        // ...and stops at red lights and for people on crossings, like a careful driver.
+        if (street) {
+          for (const { line, along } of street.linesAhead({ x: car.x, z: car.z, heading: car.heading, speed: car.speed }, 45)) {
+            const front = along - 2.1;
+            if (front < -0.3) continue;
+            const committed = front < (car.speed * car.speed) / (2 * 6) && car.speed > 2;
+            if (!committed && street.mustStop(line, front, car.speed)) {
+              const vMax = Math.sqrt(2 * 2.2 * Math.max(0, front - 0.9));
+              if (car.speed > vMax || front < 1.1) {
+                ap.throttle = 0;
+                ap.brake = Math.max(ap.brake, front < 1.1 ? 0.6 : Math.min(0.6, (car.speed - vMax) * 0.25 + 0.15));
+              } else ap.throttle = Math.min(ap.throttle, 0.25);
+              break;
+            }
+          }
+        }
         const safe = 3 + Math.abs(car.speed) * 1.6;
         if (gap < safe) {
           ap.throttle = 0;
@@ -573,8 +596,10 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     if (settings.steeringAssist) steer = assist(steer);
 
     const shape = { x: car.x, z: car.z, heading: car.heading, speed: car.speed, corners: car.corners() };
+    if (street && !ended) street.update(dt, [...traffic.cars, shape], shape);
     if (!ended) traffic.update(dt, shape);
-    const res = ended ? {} : car.step(dt, { throttle, brake: brakeValue, steer }, L, traffic.cars.length ? traffic.obstacles() : []);
+    const movingObs = [...(traffic.cars.length ? traffic.obstacles() : []), ...(street ? street.obstacles() : [])];
+    const res = ended ? {} : car.step(dt, { throttle, brake: brakeValue, steer }, L, movingObs);
     if (res.kerb !== undefined) emit({ type: 'kerb', t, speed: res.kerb });
     if (res.collision) emit({ type: 'collision', t, speed: res.collision.speed, what: res.collision.what });
 
@@ -631,6 +656,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
       analyser.conflicts(t, emit);
       analyser.roundabouts(t, signal, emit);
       analyser.detectTurn(t, emit);
+      analyser.streetEvents(t, dt, signal, emit);
     }
     recorder.push({ t, x: car.x, z: car.z, heading: car.heading, speed: car.speed, steer, signal, brake: brakeValue });
 
@@ -664,6 +690,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
 
   // ---------- Road analysis (town scenes): see src/sim/analysis.ts ----------
   const analyser = new RoadAnalyser(L, car, traffic, recorder);
+  analyser.street = street;
   let movedOffAt = -Infinity;
   // Whether the next move-off is from a parked position (kerb or handbrake) or pulling away in traffic.
   let handbrakeSinceStop = true;
@@ -785,6 +812,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     }
 
     world.update(t);
+    world.updateStreet?.(street, t);
     if (traffic.cars.length || aiBodies.count) renderTraffic();
 
     // Mirror inset.

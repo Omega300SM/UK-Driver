@@ -57,6 +57,38 @@ export type DriveEvent =
       rbWrongWay?: boolean;
       /** On the painted centre of a mini-roundabout (id), if any. */
       onMiniCentre?: string | null;
+      /** Driving along a bus lane during its hours (rule 141). */
+      inBusLane?: boolean;
+    }
+  | {
+      /** The front of the car crossed a stop line at signals or a pedestrian crossing. */
+      type: 'stopLine';
+      t: number;
+      line: string;
+      /** 'signals' for a junction; otherwise the crossing kind. */
+      kind: 'signals' | 'zebra' | 'pelican' | 'puffin' | 'toucan';
+      /** What the lights showed (null at a zebra). */
+      aspect: 'green' | 'amber' | 'red' | 'redAmber' | 'flashAmber' | null;
+      /** Distance (m) from the line when the lights turned amber, and our speed then (m/s). */
+      amberAt: { dist: number; speed: number } | null;
+      /** People on the crossing, and whether any were in or close to our path. */
+      pedsOn: number;
+      pedInPath: boolean;
+      /** Someone waiting at the kerb of a zebra. */
+      pedWaiting: boolean;
+    }
+  | {
+      /** Stopped with part of the car on a pedestrian crossing (rule 192). */
+      type: 'blockCrossing';
+      t: number;
+      crossing: string;
+    }
+  | {
+      /** Stopped inside a yellow box junction (rule 174). */
+      type: 'boxStop';
+      t: number;
+      box: string;
+      signal: SignalState;
     }
   | {
       /** Crossed the give way line onto a roundabout. */
@@ -116,7 +148,7 @@ export type DriveEvent =
       handbrake: boolean;
       gear: Gear;
       /** Where the car was pulled up, when the lesson asked for a pull-up on the left. */
-      pullUp?: { onYellow: 'double' | 'single' | null; nearJunctionM: number | null; onDoubleWhite: boolean; kerbGap: number };
+      pullUp?: { onYellow: 'double' | 'single' | null; nearJunctionM: number | null; onDoubleWhite: boolean; kerbGap: number; onZigzag?: boolean; inBusLane?: boolean };
     };
 
 export interface Fault {
