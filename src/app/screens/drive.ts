@@ -6,7 +6,7 @@ import { goHome, next } from '../nav';
 import { stageLabel, toast } from './common';
 import { Renderer } from '../../engine/renderer';
 import { buildScene } from '../../world/scenes';
-import { inRect, speedLimitAt, wrongSideBy as wrongSideAt, laneAt, junctionBoxAt, grow } from '../../world/layout';
+import { inRect, speedLimitAt, wrongSideBy as wrongSideAt, laneAt, junctionBoxAt, grow, roundaboutAt } from '../../world/layout';
 import { buildPlayerCar, setLamp } from '../../world/playerCar';
 import { speedRoundelSvg } from '../../world/signs';
 import { signSvg } from '../../world/signSvg';
@@ -645,7 +645,8 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
       if (stillFor > 0.25) {
         stationary = true;
         handbrakeSinceStop = false;
-        kerbGapAtStop = town ? pullUpInfo().kerbGap : 0;
+        // Stopped in traffic (at a roundabout, junction, lights or crossing) is not "parked", however close to the edge.
+        kerbGapAtStop = town && !analyser.atControl() ? pullUpInfo().kerbGap : 9;
         emit({ type: 'stop', t });
       }
     }
@@ -653,7 +654,8 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     // Self-cancelling indicator, like a real stalk: once the wheel has turned
     // a fair way in the signalled direction (and the car has actually turned),
     // it cancels as the wheel comes back to the centre.
-    if (signal !== 'off') {
+    // (Not while going round a roundabout: the wheel turns both ways there, and you keep signalling to your exit.)
+    if (signal !== 'off' && !roundaboutAt(L, car.x, car.z, 1)) {
       const towards = signal === 'left' ? -car.steerAngle : car.steerAngle; // steerAngle > 0 is right
       const turnedBy = Math.abs(angleDiff(car.heading, signalHeading));
       if (towards > 0.14 && turnedBy > 0.35) signalTurned = true;

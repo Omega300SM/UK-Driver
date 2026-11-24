@@ -332,6 +332,14 @@ export class RoadAnalyser {
     }
   }
 
+  /** Near a roundabout entry, junction, signals or crossing: somewhere you stop in traffic, not to park. */
+  atControl(): boolean {
+    const { L, car } = this;
+    if (roundaboutAt(L, car.x, car.z, 12)) return true;
+    if ((L.junctions ?? []).some((j) => inRect(grow(j.box, 10), car.x, car.z))) return true;
+    return (L.stopLines ?? []).some((l) => Math.hypot(l.x - car.x, l.z - car.z) < 12);
+  }
+
   // ---------- Where the car is pulled up ----------
   pullUpInfo() {
     const { L, car } = this;
