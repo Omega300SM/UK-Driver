@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { BuiltScene } from './carPark';
-import { MILL_TOWN, ROADS, R1, R2, M1, MAGIC, MAGIC_CENTRE, MAGIC_HALF_SIZE, R2_FLARE, H } from './millTownLayout';
+import { MILL_TOWN, ROADS, R1, R2, M1, MAGIC, MAGIC_CENTRE, MAGIC_HALF_SIZE, R2_FLARE, H, CAR_PARK } from './millTownLayout';
 import { isDrivable, type Lane, type Roundabout } from '../layout';
 import { buildStreet } from '../street3d';
 import { instanced, lambert, baseBox, roofPrism, rng, type Placement } from '../props';
@@ -112,7 +112,6 @@ export function buildMillTown(): BuiltScene {
   terrace(ROADS.canalSide, -1, 114, 180);
   terrace(ROADS.bridge, -1, -205, -142);
   terrace(ROADS.bridge, 1, -205, -142, { shop: true, h: 8 });
-  terrace(ROADS.bridge, -1, -116, -46);
   terrace(ROADS.bridge, 1, -116, -46);
   root.add(instanced(box, lambert(0xffffff), walls));
   root.add(instanced(roofPrism(), lambert(0x4a4f57), roofs));
@@ -202,7 +201,7 @@ export function buildMillTown(): BuiltScene {
     crowns.push({ x, y: 2 * s, z, sx: 3.4 * s, sy: 3.6 * s, sz: 3.4 * s, color: r() < 0.5 ? 0x4c7a34 : 0x5d8a3c });
   };
   for (let i = 0; i < 10; i++) tree(MAGIC_CENTRE.x - 25 + r() * 50, MAGIC_CENTRE.z - 25 + r() * 50);
-  for (let i = 0; i < 30; i++) tree(-60 + r() * 120, -40 - r() * 80);
+  for (let i = 0; i < 30; i++) tree(-60 + r() * 52, -40 - r() * 80);
   for (let i = 0; i < 20; i++) tree(220 + r() * 70, 30 + r() * 140);
   root.add(instanced(box, lambert(0x5b4330), trunks));
   root.add(instanced(new THREE.IcosahedronGeometry(0.6, 0).translate(0, 0.6, 0), lambert(0xffffff, { flatShading: true }), crowns));
@@ -226,6 +225,27 @@ export function buildMillTown(): BuiltScene {
     m.position.set((o.x0 + o.x1) / 2, 0, (o.z0 + o.z1) / 2);
     root.add(m);
   }
+
+  // Albion Retail Park: a supermarket behind the car park, and parked cars.
+  const shop = new THREE.Mesh(box, lambert(0xd9d4c7));
+  shop.scale.set(40, 7, 16);
+  shop.position.set((CAR_PARK.x0 + CAR_PARK.x1) / 2, 0, CAR_PARK.z1 + PAVE + 8.5);
+  root.add(shop);
+  const shopSign = new THREE.Mesh(new THREE.PlaneGeometry(16, 1.8), new THREE.MeshBasicMaterial({ map: fascia('ALBION FOODSTORE', '#2f8a5f') }));
+  shopSign.position.set((CAR_PARK.x0 + CAR_PARK.x1) / 2, 5.4, CAR_PARK.z1 + PAVE + 0.45);
+  shopSign.rotation.y = Math.PI;
+  root.add(shopSign);
+  root.add(instanced(box, lambert(0xb5b1a6), [{ x: (CAR_PARK.x0 + CAR_PARK.x1) / 2, z: CAR_PARK.z1 + PAVE / 2, sx: CAR_PARK.x1 - CAR_PARK.x0, sy: 0.13, sz: PAVE }]));
+  const parked = L.obstacles.filter((o) => o.kind === 'car');
+  const along = (o: (typeof parked)[number]) => o.z1 - o.z0 > o.x1 - o.x0;
+  root.add(
+    instanced(
+      box,
+      lambert(0xffffff),
+      parked.map((o) => ({ x: (o.x0 + o.x1) / 2, y: 0.3, z: (o.z0 + o.z1) / 2, sx: along(o) ? 1.8 : 4.1, sy: 0.62, sz: along(o) ? 4.1 : 1.8, color: o.color ?? 0x888888 }))
+    )
+  );
+  root.add(instanced(box, lambert(0x9fc3d6), parked.map((o) => ({ x: (o.x0 + o.x1) / 2, y: 0.92, z: (o.z0 + o.z1) / 2, sx: along(o) ? 1.6 : 2.2, sy: 0.55, sz: along(o) ? 2.2 : 1.6 }))));
 
   // Low grey Pennine cloud.
   const clouds: Placement[] = [];

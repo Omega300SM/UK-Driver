@@ -146,6 +146,21 @@ export const R2_FLARE: Rect = { x0: 140, x1: 180, z0: -H - 3.8, z1: -H };
 
 /** Bridge Street traffic lights (J1), with a yellow box junction. */
 export const J1 = { x: 100, z: -130 };
+/** Albion Retail Park car park, off Bridge Street (Day 12): two rows of bays either side of an aisle. */
+export const CAR_PARK: Rect = { x0: 46, x1: 92, z0: -100, z1: -70 };
+export const CAR_PARK_ENTRANCE: Rect = { x0: 91.9, x1: 100 - H + 0.1, z0: -85 - H, z1: -85 + H };
+const BAY_W = 2.5;
+const BAY_D = 4.8;
+/** Bays: south row S1–S15 (z −100…−95.2), north row N1–N15 (z −74.8…−70), numbered west to east. */
+export const BAYS: Array<Rect & { id: string }> = [];
+for (let i = 0; i < 15; i++) {
+  const x0 = 50 + i * BAY_W;
+  BAYS.push({ id: `S${i + 1}`, x0, x1: x0 + BAY_W, z0: CAR_PARK.z0, z1: CAR_PARK.z0 + BAY_D });
+  BAYS.push({ id: `N${i + 1}`, x0, x1: x0 + BAY_W, z0: CAR_PARK.z1 - BAY_D, z1: CAR_PARK.z1 });
+}
+/** Bridge Street north: a quiet dead end with a gap between two parked cars for parallel parking. */
+export const PARALLEL_GAP: Rect = { x0: 101.2, x1: 100 + H, z0: -75.8, z1: -66.2 };
+
 /** Westbound bus lane on Canal Side, at the kerb (rule 141). */
 export const BUS_LANE: Rect = { x0: 120, x1: 186, z0: -130 + H, z1: -130 + H + 3.8 };
 
@@ -157,6 +172,9 @@ const drivable: Rect[] = [
   bend(0, -130),
   bend(100, MAGIC_C.z),
   BUS_LANE,
+  CAR_PARK,
+  CAR_PARK_ENTRANCE,
+  ...filletsX(-85, 100 - H, -1, 4), // rounded kerbs at the car park entrance
   // Junction mouths and bends get rounded kerbs.
   ...filletsZ(-150, H, 1), // Ringway (west) meets Mill Road
   ...filletsX(-130, 200 - H, -1), // Canal Side meets Southway
@@ -220,7 +238,10 @@ const pavements: Rect[] = [
     [BUS_LANE.x1, 200 - H - CORNER_R - 0.3]
   ].map(([x0, x1]) => ({ x0, x1, z0: -130 + H, z1: -130 + H + PAVE })),
   { x0: BUS_LANE.x0, x1: BUS_LANE.x1, z0: BUS_LANE.z1, z1: BUS_LANE.z1 + PAVE },
-  ...pavementsAlong({ ...ROADS.bridge, z0: MAGIC_C.z + H + CORNER_R + 0.3 }, [mouthGap(-130)]),
+  ...pavementsAlong({ ...ROADS.bridge, z0: MAGIC_C.z + H + CORNER_R + 0.3 }, [mouthGap(-130)]).filter((r) => r.x0 > 100 || r.z1 < -100),
+  // West side of Bridge Street north: pavement either side of the car park entrance.
+  { x0: 100 - H - PAVE, x1: 100 - H, z0: -126.2 + CORNER_R + 0.3, z1: CAR_PARK_ENTRANCE.z0 - 4.3 },
+  { x0: 100 - H - PAVE, x1: 100 - H, z0: CAR_PARK_ENTRANCE.z1 + 4.3, z1: -40 },
   ...pavementsAlong({ ...ROADS.southway, z1: -24 }, [mouthGap(-130)])
 ];
 
@@ -546,6 +567,14 @@ const markers: Marker[] = [
   { id: 'p1-approach-s', label: '', x0: -H, x1: 0, z0: -106.5, z1: -60 },
   { id: 'u1-approach-s', label: '', x0: 100 - H, x1: 100, z0: -171.5, z1: -140 },
   { id: 'bus-lane-alongside', label: '', x0: 120, x1: 186, z0: -130, z1: -130 + H },
+  // Only the practice bays get a drawn marker; the rest are zones.
+  ...BAYS.map((b) => ({ id: b.id, label: b.id === 'S7' || b.id === 'N5' ? `Bay ${b.id}` : '', x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1 })),
+  { id: 'PP1', label: 'The gap between the parked cars', ...PARALLEL_GAP },
+  { id: 'car-park', label: '', ...CAR_PARK },
+  { id: 'n5-setup', label: '', x0: 50, x1: 58.5, z0: -89, z1: -80 },
+  { id: 's7-setup', label: '', x0: 57, x1: 64, z0: -89, z1: -80 },
+  { id: 'pp-setup', label: '', x0: 99, x1: 101.6, z0: -67, z1: -59 },
+  { id: 'bridge-north', label: '', x0: 100, x1: 100 + H, z0: -100, z1: -40 },
   { id: 'mn-approach-n', label: '', x0: 196, x1: 200 + H, z0: -165, z1: -125 },
   { id: 'southway-s', label: '', x0: 200 - H, x1: 200, z0: -120, z1: -40 }
 ];
@@ -664,8 +693,23 @@ const obstacles: Obstacle[] = [
   { kind: 'gate', x0: -252, x1: -250, z0: -H, z1: H },
   { kind: 'gate', x0: 300, x1: 302, z0: -H, z1: H },
   { kind: 'gate', x0: 300, x1: 302, z0: MAGIC_C.z - H, z1: MAGIC_C.z + H },
-  { kind: 'gate', x0: 100 - H, x1: 100 + H, z0: -40, z1: -38 }
+  { kind: 'gate', x0: 100 - H, x1: 100 + H, z0: -40, z1: -38 },
+  // Parked cars: either side of the parallel-parking gap on Bridge Street north…
+  { kind: 'car', x0: 102.0, x1: 103.8, z0: -80.2, z1: -76, color: 0x2e5c8a },
+  { kind: 'car', x0: 102.0, x1: 103.8, z0: -66, z1: -61.8, color: 0xb8352f },
+  // …and in some of the car park bays (S7 and N5 are left free for practice).
+  ...['S3', 'S4', 'S6', 'S8', 'S11', 'S12', 'S14', 'N2', 'N4', 'N6', 'N7', 'N10', 'N13'].map((id, i): Obstacle => {
+    const b = BAYS.find((q) => q.id === id)!;
+    const cx = (b.x0 + b.x1) / 2;
+    const cz = (b.z0 + b.z1) / 2;
+    return { kind: 'car', x0: cx - 0.9, x1: cx + 0.9, z0: cz - 2.05, z1: cz + 2.05, color: [0x3c3f44, 0xe8e4da, 0x6b8f3a, 0xd9a22e, 0x9aa3ab, 0x7a4f9a][i % 6] };
+  })
 ];
+// Bay lines (white), and the car park's edge lines.
+for (const b of BAYS) {
+  seg('edge', b.x0, b.z0, b.x0, b.z1);
+  seg('edge', b.x1, b.z0, b.x1, b.z1);
+}
 
 export const MILL_TOWN: SceneLayout = {
   name: 'Mill Town',
@@ -689,6 +733,7 @@ export const MILL_TOWN: SceneLayout = {
   stopLines,
   crossings,
   signals,
+  carParks: [CAR_PARK],
   boxes: [{ id: 'J1', x0: 100 - H, x1: 100 + H, z0: -130 - H, z1: -130 + H }],
   busLanes: [{ ...BUS_LANE, heading: W, hours: 'At any time' }]
 };

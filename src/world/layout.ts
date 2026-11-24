@@ -227,6 +227,8 @@ export interface SceneLayout {
   crossings?: Crossing[];
   signals?: SignalController[];
   boxes?: BoxJunction[];
+  /** Off-road car parks (turns inside them aren't judged as road turns). */
+  carParks?: Rect[];
   busLanes?: BusLane[];
 }
 
