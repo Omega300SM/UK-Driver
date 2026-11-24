@@ -161,7 +161,12 @@ const drivable: Rect[] = [
     [MAGIC_C.x + MAGIC_HALF, MAGIC_C.z + MAGIC_HALF],
     [MAGIC_C.x - MAGIC_HALF, MAGIC_C.z - MAGIC_HALF],
     [MAGIC_C.x + MAGIC_HALF, MAGIC_C.z - MAGIC_HALF]
-  ].map(([x, z]) => bend(x, z))
+  ].flatMap(([x, z]) => {
+    // Rounded kerb on the inside of each ring corner (the side facing the central island).
+    const sx = Math.sign(MAGIC_C.x - x);
+    const sz = Math.sign(MAGIC_C.z - z);
+    return [bend(x, z), ...filletsZ(x, z + sz * H, sz as 1 | -1, CORNER_R, 5, sx > 0 ? 'high' : 'low')];
+  })
 ];
 
 // ---- Pavements (decorative; the road edge is what counts for kerbs) -------
@@ -308,6 +313,53 @@ path(laneLine([0, -110], centreIn(R1, S)), { spawn: true });
 path(laneLine(centreOf(R2, S), [200, -110]));
 path(laneLine([200, -110], centreIn(R2, S)), { spawn: true });
 
+/** Left-lane line along a centre-line polyline, with corners chamfered so cars turn smoothly. */
+function lanePath(centre: P[], chamfer = 3.4): P[] {
+  const segs = centre.slice(1).map((b, i) => {
+    const a = centre[i];
+    const h = Math.atan2(b[0] - a[0], b[1] - a[1]);
+    return { a, b, h, l: scale(leftOf(h), LANE) };
+  });
+  const out: P[] = [add(segs[0].a, segs[0].l)];
+  for (let i = 1; i < segs.length; i++) {
+    const p = segs[i - 1];
+    const n = segs[i];
+    const m = scale(add(p.l, n.l), 0.5);
+    const k = (LANE * LANE) / (m[0] * m[0] + m[1] * m[1]);
+    const v = add(p.b, scale(m, k));
+    out.push(add(v, scale(dirOf(p.h), -chamfer)), add(v, scale(dirOf(n.h), chamfer)));
+  }
+  const last = segs[segs.length - 1];
+  out.push(add(last.b, last.l));
+  return out;
+}
+
+// Magic Roundabout: Southway down to MN; the ring between the three minis; Gasworks Lane and Wharf Street.
+{
+  const [mn, me, mw] = MAGIC;
+  const cx = MAGIC_C.x;
+  const cz = MAGIC_C.z;
+  const hf = MAGIC_HALF;
+  path(laneLine([200, -110], centreIn(mn, N)));
+  path(laneLine(centreOf(mn, N), [200, -110]));
+  const ring: Array<[P[], boolean?]> = [
+    [[centreOf(mn, W), [cx - hf, cz + hf], centreIn(mw, N)]],
+    [[centreOf(mw, N), [cx - hf, cz + hf], centreIn(mn, W)]],
+    [[centreOf(mn, E), [cx + hf, cz + hf], centreIn(me, N)]],
+    [[centreOf(me, N), [cx + hf, cz + hf], centreIn(mn, E)]],
+    [[centreOf(me, S), [cx + hf, cz - hf], [cx - hf, cz - hf], centreIn(mw, S)]],
+    [[centreOf(mw, S), [cx - hf, cz - hf], [cx + hf, cz - hf], centreIn(me, S)]],
+    [[centreOf(me, E), [298, cz]]],
+    [[[298, cz], centreIn(me, E)], true],
+    [[centreOf(mw, W), [112, cz]]],
+    [[[112, cz], centreIn(mw, W)], true]
+  ];
+  for (const [pts, spawn] of ring) path(lanePath(pts), spawn ? { spawn: true } : {});
+  for (const rb of MAGIC) {
+    for (const a of rb.arms) for (const b of rb.arms) if (a !== b) path(roundaboutPath(rb, a.angle, b.angle), { yieldTo: rb.id });
+  }
+}
+
 // ---- Markings ----------------------------------------------------------------
 const markings: Marking[] = [];
 const seg = (kind: Marking['kind'], x0: number, z0: number, x1: number, z1: number) => markings.push({ kind, x0, z0, x1, z1 });
@@ -345,6 +397,8 @@ const signs: SignPlacement[] = [
   { kind: 'name', text: 'Canal Street', x: H + 1.4, z: 30, faces: N },
   { kind: 'name', text: 'Station Road', x: -H - 1.4, z: -30, faces: S },
   { kind: 'name', text: 'Ringway', x: 186, z: H + 22, faces: N },
+  { kind: 'zone20', x: 200 - H - 1.2, z: -158, faces: S },
+  { kind: 'zone20-end', x: 200 + H + 1.2, z: -158, faces: N },
   { kind: 'name', text: 'The Magic Roundabout', x: 200 - H - 1.6, z: MAGIC_C.z + MAGIC_HALF + 16, faces: S }
 ];
 // Advance direction signs ("map" signs) on the approaches to R1 and R2.
@@ -381,6 +435,7 @@ const markers: Marker[] = [
   { id: 'MR1', label: 'Mill Road, on the left', x0: 70, x1: 95, z0: -H, z1: -H + 2.8 },
   { id: 'CS1', label: 'Canal Street, on the left', x0: -H, x1: -H + 2.8, z0: 80, z1: 98 },
   { id: 'SW1', label: 'Southway, on the left', x0: 200 + H - 2.8, x1: 200 + H, z0: -95, z1: -77 },
+  { id: 'SW2', label: 'Southway, on the left', x0: 200 - H, x1: 200 - H + 2.8, z0: -95, z1: -77 },
   { id: 'MW1', label: 'Mill Road, on the left', x0: -112, x1: -88, z0: H - 2.8, z1: H },
   { id: 'r2-right-lane', label: '', x0: 140, x1: 176, z0: -H, z1: 0 },
   { id: 'r2-left-lane', label: '', x0: 140, x1: 176, z0: -H - 3.8, z1: -H },
@@ -394,7 +449,9 @@ const markers: Marker[] = [
   { id: 'm1-approach-e', label: '', x0: 9, x1: 60, z0: 179, z1: 180 + H },
   { id: 'ringway-w', label: '', x0: -153.8, x1: -146.2, z0: 60, z1: 170 },
   { id: 'ringway-mill-approach', label: '', x0: -153.8, x1: -150, z0: H, z1: 40 },
-  { id: 'magic', label: '', x0: 150, x1: 250, z0: -265, z1: -165 }
+  { id: 'magic', label: '', x0: 150, x1: 250, z0: -265, z1: -165 },
+  { id: 'mn-approach-n', label: '', x0: 196, x1: 200 + H, z0: -165, z1: -125 },
+  { id: 'southway-s', label: '', x0: 200 - H, x1: 200, z0: -120, z1: -40 }
 ];
 
 const obstacles: Obstacle[] = [
@@ -436,6 +493,7 @@ export const MT_STARTS = {
   millEast: (x: number) => ({ x, z: -H + 1.15, heading: E }),
   millWest: (x: number) => ({ x, z: H - 1.15, heading: W }),
   southwayNorth: (z: number) => ({ x: 200 + H - 1.15, z, heading: N }),
+  southwaySouth: (z: number) => ({ x: 200 - H + 1.15, z, heading: S }),
   canalNorth: (z: number) => ({ x: H - 1.15, z, heading: N })
 };
 export const MT_HEADINGS = { E, W, N, S };
