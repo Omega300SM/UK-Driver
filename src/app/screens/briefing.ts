@@ -23,7 +23,7 @@ export function briefingScreen(s: LessonSession): Screen {
       ? h(
           'div',
           { class: 'sign-gallery' },
-          ...sl.signs.map((g) => h('figure', {}, h('div', { html: signSvg({ kind: g.kind, value: g.value, map: g.map }, 64) }), h('figcaption', {}, g.caption ?? signName({ kind: g.kind, value: g.value }))))
+          ...sl.signs.map((g) => h('figure', {}, h('div', { html: signSvg({ kind: g.kind, value: g.value, map: g.map, text: g.text }, 64) }), h('figcaption', {}, g.caption ?? signName({ kind: g.kind, value: g.value }))))
         )
       : null;
     body.replaceChildren(

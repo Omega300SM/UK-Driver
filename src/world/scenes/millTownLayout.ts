@@ -536,6 +536,16 @@ const markers: Marker[] = [
   { id: 'ringway-w', label: '', x0: -153.8, x1: -146.2, z0: 60, z1: 170 },
   { id: 'ringway-mill-approach', label: '', x0: -153.8, x1: -150, z0: H, z1: 40 },
   { id: 'magic', label: '', x0: 150, x1: 250, z0: -265, z1: -165 },
+  { id: 'BS1', label: 'Bridge Street, on the left', x0: 100 - H, x1: 100 - H + 2.8, z0: -206, z1: -192 },
+  { id: 'j1-approach-e', label: '', x0: 60, x1: 94.5, z0: -130 - H, z1: -130 },
+  { id: 'j1-approach-w', label: '', x0: 105.5, x1: 150, z0: -130, z1: -130 + H },
+  { id: 'j1-approach-s', label: '', x0: 100 - H, x1: 100, z0: -124.5, z1: -80 },
+  { id: 'z1-approach-e', label: '', x0: 8, x1: 41.8, z0: -130 - H, z1: -130 },
+  { id: 'z1-approach-w', label: '', x0: 48.2, x1: 85, z0: -130, z1: -130 + H },
+  { id: 'p1-approach-n', label: '', x0: 0, x1: H, z0: -128, z1: -113.5 },
+  { id: 'p1-approach-s', label: '', x0: -H, x1: 0, z0: -106.5, z1: -60 },
+  { id: 'u1-approach-s', label: '', x0: 100 - H, x1: 100, z0: -171.5, z1: -140 },
+  { id: 'bus-lane-alongside', label: '', x0: 120, x1: 186, z0: -130, z1: -130 + H },
   { id: 'mn-approach-n', label: '', x0: 196, x1: 200 + H, z0: -165, z1: -125 },
   { id: 'southway-s', label: '', x0: 200 - H, x1: 200, z0: -120, z1: -40 }
 ];
@@ -695,6 +705,7 @@ export const MT_STARTS = {
   millWest: (x: number) => ({ x, z: H - 1.15, heading: W }),
   southwayNorth: (z: number) => ({ x: 200 + H - 1.15, z, heading: N }),
   southwaySouth: (z: number) => ({ x: 200 - H + 1.15, z, heading: S }),
+  bridgeSouth: (z: number) => ({ x: 100 - H + 1.15, z, heading: S }),
   canalNorth: (z: number) => ({ x: H - 1.15, z, heading: N })
 };
 export const MT_HEADINGS = { E, W, N, S };

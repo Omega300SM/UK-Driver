@@ -115,4 +115,52 @@ export const ROUTES2: Record<number, Step[]> = {
     ...pullIn([[202.4, -94, 4], [202.65, -86, 0]]),
     ...secure
   ]
+  ,
+  // Day 10: pelican, zebra, left at the lights, puffin, pull up. The driver
+  // stops for red lights and people on crossings by itself (as AI cars do).
+  10: [
+    { moveOff: 'right' },
+    { drive: [[-1.9, -55, 6]] },
+    { act: 'signal', arg: 'off' },
+    { act: 'mirror', arg: 'interior' },
+    { drive: [[-1.9, -96, 7], [-1.9, -122, 6], [-1.9, -125, 4], [-1.4, -129.6, 4], [2, -131.9, 4], [12, -131.9, 6]] },
+    { act: 'mirror', arg: 'interior' },
+    { drive: [[38, -131.9, 6], [70, -131.9, 8]] },
+    // Left at the lights onto Bridge Street.
+    { act: 'mirror', arg: 'interior' },
+    { act: 'mirror', arg: 'left' },
+    { act: 'signal', arg: 'left' },
+    { drive: [[88, -131.9, 5], [93.4, -131.9, 3.5], [96.5, -132.7, 3.5], [98.1, -135.5, 3.5], [98.1, -142, 5]] },
+    { act: 'signal', arg: 'off' },
+    { act: 'mirror', arg: 'interior' },
+    { drive: [[98.1, -165, 7], [98.1, -186, 6]] },
+    ...pullIn([[97.8, -194, 4], [97.35, -199, 0]]),
+    ...secure
+  ],
+  // Day 11: left onto Canal Side past the bus lane, right at the lights (waiting in the box for oncoming traffic), puffin, pull up.
+  11: [
+    { moveOff: 'right' },
+    { drive: [[198.1, -55, 6]] },
+    { act: 'signal', arg: 'off' },
+    { drive: [[198.1, -100, 8]] },
+    { act: 'mirror', arg: 'interior' },
+    { act: 'mirror', arg: 'left' },
+    { act: 'signal', arg: 'left' },
+    { drive: [[198.1, -114, 5], [198.1, -120, 4], [197.4, -124.5, 3.5], [194, -127.6, 3.5], [188, -128.1, 5]] },
+    { act: 'signal', arg: 'off' },
+    { drive: [[170, -128.1, 8], [125, -128.1, 8]] },
+    // Right at the lights: into the box, wait for oncoming traffic, then turn.
+    { act: 'mirror', arg: 'interior' },
+    { act: 'mirror', arg: 'right' },
+    { act: 'signal', arg: 'right' },
+    { drive: [[112, -128.4, 5], [106, -128.6, 3], [101.8, -128.8, 0]] },
+    { waitGap: [[104, -131.9], [99, -131.9], [94, -131.9]], secs: 5 },
+    { act: 'look', arg: 'right' },
+    { drive: [[99.4, -130.6, 3], [98.3, -133.5, 3.5], [98.1, -142, 5]] },
+    { act: 'signal', arg: 'off' },
+    { act: 'mirror', arg: 'interior' },
+    { drive: [[98.1, -165, 7], [98.1, -186, 6]] },
+    ...pullIn([[97.8, -194, 4], [97.35, -199, 0]]),
+    ...secure
+  ]
 };

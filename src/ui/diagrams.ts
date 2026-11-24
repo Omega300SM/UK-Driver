@@ -44,6 +44,16 @@ export function diagram(id: DiagramId): string {
       return rbLanes();
     case 'magic':
       return magicDiagram();
+    case 'zebra':
+      return zebraDiagram();
+    case 'signal-crossings':
+      return signalCrossings();
+    case 'lights-sequence':
+      return lightsSequence();
+    case 'box-junction':
+      return boxJunction();
+    case 'bus-lane':
+      return busLaneDiagram();
     default:
       return `<div style="display:grid;place-items:center;gap:8px">${maggieSvg('proud', 150)}<b>Maggie Hale</b><small class="muted">Ex-DVSA examiner · 31 years</small></div>`;
   }
@@ -307,4 +317,87 @@ function magicDiagram(): string {
       .join('')}
     <text x="170" y="100" ${F} font-size="13" text-anchor="middle" fill="#fff">Treat each</text><text x="170" y="116" ${F} font-size="13" text-anchor="middle" fill="#fff">mini separately</text>
     <text x="170" y="182" ${F} font-size="11" text-anchor="middle" fill="#fff">Rules 189 and 190</text></svg>`;
+}
+
+const person = (x: number, y: number, c = '#ffd23f') => `<g transform="translate(${x},${y})"><circle r="5" cy="-12" fill="${c}"/><rect x="-4" y="-7" width="8" height="14" rx="3" fill="${c}"/></g>`;
+const zigzag = (x0: number, x1: number, y: number) => {
+  let d = `M${x0} ${y}`;
+  for (let x = x0, i = 0; x < x1; x += 8, i++) d += ` L${x + 8} ${y + (i % 2 ? -4 : 4)}`;
+  return `<path d="${d}" stroke="#fff" stroke-width="2" fill="none"/>`;
+};
+
+function zebraDiagram(): string {
+  const stripes = Array.from({ length: 7 }, (_, i) => `<rect x="160" y="${52 + i * 10}" width="26" height="5" fill="#fff"/>`).join('');
+  return svg(
+    `${road(50, 70)}${stripes}${zigzag(70, 150, 56)}${zigzag(70, 150, 114)}${zigzag(196, 276, 56)}${zigzag(196, 276, 114)}
+    <circle cx="156" cy="36" r="7" fill="#f2a20c"/><circle cx="190" cy="134" r="7" fill="#f2a20c"/>
+    ${car(118, 102, '#2f8a5f', 0)}${person(172, 40)}
+    <path d="M146 102 L152 102" stroke="#fff" stroke-width="3" stroke-dasharray="3 2"/>
+    <text x="12" y="22" ${F} font-size="13" fill="#fff">Zebra: no lights. Flashing amber beacons.</text>
+    <text x="12" y="160" ${F} font-size="12" fill="#fff">Waiting? Be ready to stop. On it? You MUST stop.</text>`,
+    'Zebra crossing: stripes, flashing beacons and zig-zags. Give way to people waiting, and you must stop for anyone on it'
+  );
+}
+
+function signalCrossings(): string {
+  const head = (x: number, lamps: string[], label: string, sub: string) => `<g transform="translate(${x},28)">
+    <rect x="-13" y="0" width="26" height="70" rx="6" fill="#161718"/>
+    ${lamps.map((c, i) => `<circle cx="0" cy="${13 + i * 22}" r="8" fill="${c}"/>`).join('')}
+    <text y="92" ${F} font-size="11" text-anchor="middle" fill="#fff">${label}</text>
+    <text y="106" font-family="system-ui" font-size="9.5" text-anchor="middle" fill="#e8f3ec">${sub}</text></g>`;
+  const off = '#3a3a3a';
+  return `<svg viewBox="0 0 340 170" role="img" aria-label="Pelican crossings have a flashing amber phase: give way to anyone on the crossing. Puffin and toucan crossings go red and amber, like traffic lights."><rect width="340" height="170" rx="12" fill="#1f6f4a"/>
+    <text x="12" y="18" ${F} font-size="12" fill="#fff">Pelican</text>
+    ${head(36, ['#ff2a1a', off, off], 'Red', 'Stop')}${head(92, [off, '#ffa514', off], 'Flashing amber', 'Give way to anyone')}${head(150, [off, off, '#2bff6a'], 'Green', 'Go if clear')}
+    <line x1="180" y1="10" x2="180" y2="160" stroke="#fff" stroke-opacity=".4"/>
+    <text x="192" y="18" ${F} font-size="12" fill="#fff">Puffin / toucan</text>
+    ${head(214, ['#ff2a1a', off, off], 'Red', 'Stop')}${head(262, ['#ff2a1a', '#ffa514', off], 'Red + amber', 'Still stop')}${head(310, [off, off, '#2bff6a'], 'Green', 'Go if clear')}
+    <text x="12" y="160" font-family="system-ui" font-size="10.5" fill="#e8f3ec">Rules 196–199: give way to anyone still crossing, whatever your light.</text></svg>`;
+}
+
+function lightsSequence(): string {
+  const steps: Array<[string[], string, string]> = [
+    [['#ff2a1a', '', ''], 'Red', 'Stop behind the line'],
+    [['#ff2a1a', '#ffa514', ''], 'Red + amber', 'Still stop'],
+    [['', '', '#2bff6a'], 'Green', 'Go, if clear'],
+    [['', '#ffa514', ''], 'Amber', 'Stop, unless too close']
+  ];
+  return `<svg viewBox="0 0 340 170" role="img" aria-label="Traffic light sequence: red, red and amber, green, amber, then red again"><rect width="340" height="170" rx="12" fill="#1f6f4a"/>
+    ${steps
+      .map(
+        ([lamps, a, b], i) => `<g transform="translate(${46 + i * 82},22)">
+      <rect x="-15" y="0" width="30" height="80" rx="7" fill="#161718"/>
+      ${lamps.map((c, k) => `<circle cx="0" cy="${15 + k * 25}" r="9" fill="${c || '#3a3a3a'}"/>`).join('')}
+      <text y="100" ${F} font-size="12" text-anchor="middle" fill="#fff">${a}</text>
+      <text y="115" font-family="system-ui" font-size="10" text-anchor="middle" fill="#e8f3ec">${b}</text>
+      ${i < 3 ? `<text x="41" y="44" ${F} font-size="16" text-anchor="middle" fill="#ffd23f">→</text>` : ''}</g>`
+      )
+      .join('')}
+    <text x="12" y="160" font-family="system-ui" font-size="10.5" fill="#e8f3ec">Rules 175–176. After amber comes red again.</text></svg>`;
+}
+
+function boxJunction(): string {
+  return svg(
+    `${road(50, 70)}<rect x="135" y="0" width="70" height="170" fill="#50545a"/>
+    <clipPath id="bx"><rect x="135" y="50" width="70" height="70"/></clipPath><g clip-path="url(#bx)">${Array.from({ length: 18 }, (_, i) => `<line x1="${100 + i * 10}" y1="50" x2="${170 + i * 10}" y2="120" stroke="#f2c21b" stroke-width="2"/><line x1="${170 + i * 10}" y1="50" x2="${100 + i * 10}" y2="120" stroke="#f2c21b" stroke-width="2"/>`).join('')}</g>
+    <rect x="135" y="50" width="70" height="70" fill="none" stroke="#f2c21b" stroke-width="3"/>
+    ${car(100, 102, '#2f8a5f', 0)}${car(240, 102, '#b8352f', 0)}${car(290, 102, '#2e5c8a', 0)}
+    <text x="12" y="22" ${F} font-size="13" fill="#fff">Don’t enter until your exit is clear</text>
+    <text x="12" y="160" ${F} font-size="11.5" fill="#fff">Exception: waiting to turn right, held by oncoming traffic</text>`,
+    'Box junction: do not enter the yellow box until your exit is clear, unless turning right and only blocked by oncoming traffic'
+  );
+}
+
+function busLaneDiagram(): string {
+  return svg(
+    `<rect x="0" y="42" width="340" height="96" fill="#50545a"/><rect x="0" y="34" width="340" height="8" fill="#b9b5aa"/><rect x="0" y="138" width="340" height="8" fill="#b9b5aa"/>
+    <rect x="0" y="110" width="340" height="28" fill="#8f3a30"/><rect x="0" y="108" width="340" height="3" fill="#fff"/>
+    ${centre(76)}<text x="60" y="130" ${F} font-size="13" fill="#fff">BUS LANE</text>
+    ${car(160, 96, '#2f8a5f', 0)}<g transform="translate(260,124)"><rect x="-34" y="-11" width="68" height="22" rx="4" fill="#d9a22e"/></g>
+    <g transform="translate(300,6) scale(0.28)">${signSvg({ kind: 'bus-lane', text: 'Mon–Fri 7–10am' }, 100).replace('<svg ', '<svg x="0" y="0" ')}</g>
+    <text x="12" y="22" ${F} font-size="13" fill="#fff">Keep out during its hours</text>
+    <text x="12" y="162" font-family="system-ui" font-size="10.5" fill="#e8f3ec">The sign gives the times. "At any time" means 24/7.</text>`,
+    'Bus lane: keep out during the times shown on the sign',
+    170
+  );
 }

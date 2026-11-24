@@ -39,6 +39,11 @@ export type DiagramId =
   | 'roundabout-signals'
   | 'roundabout-lanes'
   | 'magic'
+  | 'zebra'
+  | 'signal-crossings'
+  | 'lights-sequence'
+  | 'box-junction'
+  | 'bus-lane'
   | 'none';
 
 /** A road sign drawn from the procedural sign set. */
@@ -46,6 +51,8 @@ export interface SignRef {
   kind: SignKind;
   value?: number;
   caption?: string;
+  /** Words on the sign (e.g. bus lane hours). */
+  text?: string;
   /** Exits for a roundabout map sign. */
   map?: SignPlacement['map'];
 }
