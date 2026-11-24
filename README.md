@@ -6,7 +6,7 @@ It's an installable PWA (Vite + TypeScript + Three.js). It plays offline once lo
 
 > **Important.** This is a learning aid. It does not replace lessons with a DVSA-approved driving instructor. You need a provisional licence to drive on public roads, and the [Highway Code](https://www.gov.uk/guidance/the-highway-code) is the legal reference. Never play while driving. Content is written for England.
 
-**Status:** Week 1 is complete: Day 1 (cockpit drill, in a car park) and Days 2–7 in the market town of Little Ashby, ending with the **Market Town Test** boss. Days 8–30 are listed on the map as "Coming soon". See [PLAN.md](PLAN.md) for the roadmap and [NEEDS_REVIEW.md](NEEDS_REVIEW.md) for accuracy notes.
+**Status:** Weeks 1 and 2 are complete. Day 1 is in a car park, Days 2–7 are in the market town of Little Ashby (ending with the **Market Town Test** boss), and Days 8–14 are in Mill Town, Greater Manchester (ending with the **Rush Hour** boss). Days 15–30 are listed on the map as "Coming soon". See [PLAN.md](PLAN.md) for the roadmap and [NEEDS_REVIEW.md](NEEDS_REVIEW.md) for accuracy notes.
 
 ### Week 1: Foundations
 | Day | Lesson | Where |
@@ -18,6 +18,17 @@ It's an installable PWA (Vite + TypeScript + Three.js). It plays offline once lo
 | 5 | Road signs and markings, yellow and white lines | Market Street → Ashby Road |
 | 6 | Junctions: give way, STOP, emerging, turning right | Mill Lane, Market Street, Church Street (traffic) |
 | 7 | **BOSS: Market Town Test** (no guided drive, marked like the real thing) | A full loop of Little Ashby |
+
+### Week 2: Town Driving (Mill Town)
+| Day | Lesson | Where |
+|---|---|---|
+| 8 | Roundabouts I: priority, signals, mini-roundabouts | Mill Road roundabout, Canal Street mini |
+| 9 | Roundabouts II: two-lane, spiral markings, the Magic Roundabout | Ringway roundabout, a ring of minis |
+| 10 | Pedestrian crossings: zebra, pelican, puffin | Canal Side, Station Road, Bridge Street |
+| 11 | Traffic lights, box junctions and bus lanes | Bridge Street lights, Canal Side bus lane |
+| 12 | Parking and manoeuvres: reverse bay park, parallel park | Albion Retail Park, Bridge Street |
+| 13 | Vulnerable road users: H1–H3, cyclists, horses, school patrol | The Ringway past St Anne’s school |
+| 14 | **BOSS: Rush Hour** (busy traffic, everything from the week) | A full loop of Mill Town |
 
 ---
 
@@ -34,7 +45,7 @@ npm run dev          # http://localhost:5173 (also on your LAN, for a phone on t
 | `npm run build` | Type-check and build to `dist/` (with service worker) |
 | `npm run preview` | Serve the production build on port 4173 |
 | `npm test` | Unit tests (Vitest): rules engine, scoring, unlocks, save/load, car model, content checks |
-| `npm run e2e` | Playwright on iPhone 13 emulation, portrait and landscape (builds first). Add `-- --trace off` to skip tracing. Includes a scripted "careful learner" drive of every Week 1 test route, which must score zero faults |
+| `npm run e2e` | Playwright on iPhone 13 emulation, portrait and landscape (builds first). Add `-- --trace off` to skip tracing. Includes a scripted "careful learner" drive of every Week 1 and Week 2 test route, which must finish with zero faults |
 | `node scripts/make-icons.mjs` | Re-render the PNG app icons from `public/icons/icon.svg` |
 
 Add `?debug` to the URL for an FPS counter. `?e2e` exposes test hooks (`window.__DE`, `window.__drive`).
@@ -67,7 +78,7 @@ src/
   content/      ← all lesson text, quizzes, Highway Code refs, badges (pure data)
   rules/        ← event-driven rules engine, fault catalogue, replay recorder (no Three.js)
   scoring/      ← DVSA-style tally, lesson %, stars, XP, unlocks, streaks, badges (no Three.js)
-  sim/          ← arcade car model (kinematic bicycle, automatic gearbox), autopilot for tests
+  sim/          ← car model (kinematic bicycle, automatic), AI traffic (lanes and paths), signals + pedestrians, road analyser, autopilot
   world/        ← Three.js scene builders (InstancedMesh props, procedural signs), pure layout data
   engine/       ← renderer (DPR ≤ 2, fog, no shadow maps, mirror inset via scissor)
   instructor/   ← Maggie's avatar, speech bubble/subtitles, debrief wording
@@ -79,6 +90,7 @@ src/
 - **Rules engine.** The sim and HUD emit events (`mirror`, `shoulder`, `signal`, `moveOff`, `stop`, `kerb`, `collision`, `tick`, …). Each check in `src/rules/checks/` is a small object that turns events into faults. In guided and free drives the engine runs in *coach* mode: Maggie comments, but nothing is scored.
 - **Scoring.** More than 15 driving faults, or any serious or dangerous fault, fails the test drive. A dangerous fault stops the drive. Lesson % = 60% test + 25% quiz + 15% guided drive. You need **80% and a passed test** to unlock the next day. All weights live in `src/scoring/lessonScore.ts`.
 - **Daily gate.** Day *n* opens the calendar day after Day *n−1* is first passed, unless **Sprint mode** is on in Settings.
+- **Town simulation (Week 2).** AI cars follow lane paths, give way at roundabouts and junctions (first come, first served), stop at red lights and for people on crossings. `src/sim/street.ts` runs the signal phases (junction lights, pelican, puffin) and the pedestrians, and decides "must I stop at this line?" for AI cars, the scripted test driver and the rules alike. `src/sim/analysis.ts` turns the road situation into rule events (roundabout entries/exits, stop lines, passing cyclists, box junctions).
 - **Replays.** A 10 Hz ring buffer records the car. Each test fault keeps the 8 seconds around it, drawn as a top-down replay with the Highway Code rule.
 - **Capacitor-ready.** Relative asset paths, no server, and every browser API sits behind `src/platform/*`, so native plugins can replace them later.
 
@@ -95,7 +107,7 @@ src/
    - `rules`: the rule numbers the lesson cites.
 3. **Register it** in `LESSONS` in `src/content/curriculum.ts`. The day then shows as available on the map.
 4. **Scene.** Reuse `carPark` or `town` (Little Ashby), or add a layout in `src/world/scenes/<name>Layout.ts` (pure data, see `src/world/layout.ts`: roads, kerbs, obstacles, markers, speed zones, lanes, markings, signs, junctions, yellow lines) plus a Three.js builder, and register it in `src/world/scenes/index.ts`. Give each drive a `start`, a `hint` route, a `traffic` level and any `scripted` cars (e.g. an oncoming car released when you reach an area).
-5. **Test route.** Add a scripted good drive to `tests/e2e/routes.ts`; the Week 1 spec drives it and expects zero faults. It catches impossible corners, unreachable markers and over-strict rules.
+5. **Test route.** Add a scripted good drive to `tests/e2e/routes.ts` (Little Ashby) or `routes2.ts` (Mill Town: it has helpers for roundabouts and reversing); the specs drive it and expect zero faults. It catches impossible corners, unreachable markers and over-strict rules.
 6. **New rules checks.** Add a check to `src/rules/checks/`, its fault text and severity to `src/rules/faults.ts` (citing rule numbers), and unit tests in `tests/unit/rules.test.ts`.
 7. Run `npm test` and `npm run e2e`.
 
@@ -106,4 +118,4 @@ British English and UK terms (bonnet, boot, kerb, give way, dual carriageway). S
 
 ## Accuracy
 
-Rules cited in Week 1 were checked against gov.uk on 23 November 2026: rules 97, 99, 103, 109, 112, 123, 124, 125, 126, 127, 129, 146, 152, 159, 160, 161, 163, 170, 171, 172, 179, 180, 182, 183, 238, 239, 240 and 243, plus the Traffic signs and Road markings sections. Fault severities, timing windows and pass marks are game-design choices modelled on DVSA marking, and are listed for review in `NEEDS_REVIEW.md`. Road signs are original procedural drawings that follow UK shapes and colours. Cars are generic, with no real brands.
+Rules cited in Week 1 were checked against gov.uk on 23 November 2026: rules 97, 99, 103, 109, 112, 123, 124, 125, 126, 127, 129, 146, 152, 159, 160, 161, 163, 170, 171, 172, 179, 180, 182, 183, 238, 239, 240 and 243, plus the Traffic signs and Road markings sections. Week 2 rules were checked on 24 November 2026: H1–H3, 141, 163 (passing distances), 174–178, 184–204, 207, 208, 210–213 and 215, plus the Light signals section. Fault severities, timing windows and pass marks are game-design choices modelled on DVSA marking, and are listed for review in `NEEDS_REVIEW.md`. Road signs are original procedural drawings that follow UK shapes and colours. Cars are generic, with no real brands.

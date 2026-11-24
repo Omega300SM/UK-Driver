@@ -36,6 +36,24 @@ Items to check with a human (ideally an ADI) before release. Rule text was check
 | 243 | Do not stop or park opposite or within 10 m of a junction | Pull-up fault |
 | Traffic signs section | Red circles mostly prohibit; blue circles mostly give positive instruction; triangles mostly warn; direction/information signs mostly rectangular | Day 5 |
 
+## Verified against gov.uk (Week 2, Days 8–14), 24 November 2026
+| Rule | Topic | Used for |
+|------|-------|----------|
+| H1 | Hierarchy: those who can do the greatest harm bear the greatest responsibility | Day 13 |
+| H2 | At a junction, give way to pedestrians crossing or waiting to cross the road you turn into or out of; MUST give way on a zebra | Junction-mouth crossing on the Ringway, Day 13 |
+| H3 | Don’t cut across cyclists or horse riders going ahead when turning | Day 13 briefing and quiz (not yet auto-detected) |
+| 141 | Bus lanes: don’t drive in one during its hours unless signs allow; may enter to stop, load or unload where not prohibited | Bus-lane fault, Day 11 |
+| 163 | Overtaking; as a guide leave at least 1.5 m for cyclists at up to 30 mph (more when faster), pass horses under 10 mph with at least 2 m | Passing checks, Day 13 |
+| 174 | Box junctions: MUST NOT enter until the exit is clear; may wait when turning right and blocked only by oncoming traffic | Box-junction fault, Day 11 |
+| 175–176 | Lights: MUST stop behind the line unless green; amber = stop unless too close; red and amber also means stop | Red/amber faults, Day 11 |
+| 177–178 | Green filter arrows; advanced stop lines | Day 11 briefing and quiz (no filter lane or ASL modelled yet) |
+| 184–190 | Roundabouts: approach (MSM, lane), priority from the right, signals and positions, watch for others, mini-roundabouts (MUST pass round the markings), double and multiple minis | Days 8, 9 and 14 |
+| 191–199 | Pedestrian crossings: zig-zags, keeping crossings clear, patience, zebra, pelican (flashing amber), give way to anyone still crossing, puffin/toucan | Days 10 and 14 |
+| 200–203 | Reversing: choose a safe place, reverse in and drive out, look all round, no further than necessary | Day 12 |
+| 204, 207, 208, 210–213, 215 | Vulnerable road users, children and older people (20 vs 40 mph), schools, school crossing patrols (MUST stop), cyclists and motorcyclists, horse riders | Day 13 |
+| 239–240 | Parking: close to the side, not against the traffic flow; MUST NOT stop on a crossing or its zig-zags | Pull-up and parking checks |
+| Light signals section | RED AND AMBER also means ‘Stop’ | Lights diagram, Day 11 |
+
 ## Game-design choices that are *not* Highway Code rules
 - **Fault severities.** The game decides which mistakes are minor, serious or dangerous. These mirror the spirit of DVSA marking but are simplified. DVSA examiners judge each fault in context. An ADI should review the table in `src/rules/faults.ts`.
 - **"Mirror check within 4 seconds before signalling/moving off."** The Highway Code says "in good time". 4 s is a game tuning value.
@@ -52,9 +70,17 @@ Items to check with a human (ideally an ADI) before release. Rule text was check
 - **Town geometry.** Lanes are 3.8 m wide with 5 m kerb radii at junctions. Real roads vary.
 - **AI traffic.** AI cars give way to oncoming traffic before passing parked cars on their side and queue behind stopped vehicles. They never run red lights or behave badly, which real traffic sometimes does.
 
+- **Week 2 severities.** Joining a roundabout in front of circulating traffic: under ~2.2 s serious, under 1 s dangerous. Wrong approach signal, no left signal when leaving, wrong lane: minor. Going round the wrong way: dangerous. Driving over a mini-roundabout’s centre: serious. Red light (or red and amber): serious. Going on at amber with plenty of room to stop: minor (judged from where you were and your speed when it changed; 3 m/s² braking plus 4 m). Passing someone on a crossing: serious, or dangerous if they were close to your path; someone waiting at a zebra or a junction mouth: minor. Stopping on a crossing: minor; stopping in a box junction (not turning right): serious; driving in a bus lane for 2 s: minor; pulling up on zig-zags or School Keep Clear markings: serious. Passing a cyclist under 1.4 m (1.9 m above 30 mph): serious, under 0.7 m: dangerous; a horse under 1.9 m or above 11 mph: serious (small allowances for sim precision). Not looking all round before reversing: minor. Finishing over a bay’s lines or more than ~13° crooked: minor; parallel park more than 0.5 m from the kerb: minor.
+- **Roundabout signals.** Exits are classed by angle: under 135° = left, over 225° = right, otherwise ahead. Signals on minis are judged on the approach only (there’s little time to signal off). The indicator doesn’t self-cancel while you are on a roundabout.
+- **Signal timings.** Junction green 14 s, amber 3 s, all-red 2 s, red and amber 2 s. Pelican: 8 s minimum green, red 7 s, flashing amber 6 s. Puffin: red held 6–16 s while people are on the crossing. Real timings vary by site.
+- **Pedestrians.** People arrive at crossings at random. At a zebra (and a junction mouth) they step out once traffic has stopped or is more than ~4.5 s away. A pedestrian counts as “waiting” after 1.2 s at the kerb, so drivers aren’t faulted for someone who appears at the last moment.
+- **The Magic Roundabout.** Ours is a simplified ring of three mini-roundabouts round an island, inspired by real multiple-roundabout junctions. It is not a copy of any real site.
+- **Bus lane hours.** Canal Side’s bus lane is “at any time”. Timed bus lanes aren’t modelled yet (the game has no clock).
+- **Manoeuvres.** Bays are 2.5 × 4.8 m and the parallel gap is about 9.6 m (2.3 car lengths), a little generous for a game. Reverse parking is judged at the end (inside the lines, angle). Rule 201’s “reverse in, drive out” is taught, not enforced.
+- **Cyclists and horse riders** ride steadily near the kerb and never wobble or turn. The passing check measures the closest side-to-side gap while you are alongside.
+
 ## Still to verify (future days)
 - Rule 126 two-second rule wording (Day 16) — fetched; doubled in wet, up to ten times on ice.
-- Passing distances (1.5 m up to 30 mph for cyclists; 2 m for horse riders/pedestrians in the road) — Rule 163 / H-rules, to confirm before Week 2.
 - Mock theory test format (50 questions, 57 minutes, 43 to pass) and hazard perception (14 clips, 44/75) — confirm on gov.uk before Day 27.
 - New-driver rules (6 points within 2 years), ULEZ/CAZ details — confirm before Day 24.
 - 20 mph defaults differ in Wales; English 20 mph zones are set by local councils — keep England-only wording.

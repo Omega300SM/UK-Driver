@@ -36,7 +36,8 @@ src/
   platform/            storage, audio (synthesised sounds; no audio files), speech, motion, ios
   engine/              renderer (DPR ≤ 2, fog, 1 light, no shadow maps), loop
   world/               road + props builders (InstancedMesh), signs (procedural canvas), scenes/carPark.ts
-  sim/                 car.ts (kinematic bicycle model, automatic), controls.ts (input state)
+  sim/                 car.ts (kinematic bicycle model, automatic), traffic.ts (lane + path AI), street.ts (signals,
+                       crossings, pedestrians), analysis.ts (road situation → rule events), autopilot.ts
   rules/               types, RulesEngine, checks/*, recorder (ring buffer for replays)
   scoring/             dvsa.ts, lessonScore.ts, progress.ts (unlock, streaks, XP, badges)
   instructor/          maggie.ts (avatar SVG + moods), lines.ts (dialogue variety), bubble.ts (subtitles)
@@ -77,7 +78,7 @@ tests/e2e              Playwright (iPhone 13 portrait + landscape): launch, less
 | M4 | **Day 1 vertical slice** ✅ | Briefing → drill → guided → free → test → quiz → debrief + replay |
 | M5 | Tests + docs ✅ | Vitest + Playwright, README, Vercel guide → iPhone review done (layout, two-finger controls, voice fixes) |
 | M6 | Week 1 ✅ | Days 2–7 in Little Ashby: moving off/stopping, road position and meeting, speed limits, signs and markings, junctions, BOSS: Market Town Test. AI traffic, scripted test routes |
-| M7 | Week 2 | Roundabouts (incl. bonus "magic"), crossings, lights, parking, vulnerable road users, AI traffic/peds/cyclists, BOSS: Rush Hour |
+| M7 | Week 2 ✅ | Days 8–14 in Mill Town: roundabouts (mini, two-lane spiral, the Magic Roundabout), crossings (zebra/pelican/puffin), lights + box junction + bus lane, reverse bay and parallel parking, vulnerable road users (H1–H3, cyclists, horses, school patrol), BOSS: Rush Hour. Path-following AI, signal controllers, pedestrians, reversing camera, scripted test routes |
 | M8 | Week 3 | Country lanes, weather + stopping distances, dual carriageways, motorways + smart motorways, night, BOSS: Coast run |
 | M9 | Week 4 | Hazard perception clips, special situations, law, eco/EV/warning lights, sat nav + show me/tell me, mock theory + practical, Grand Tour, graduation certificate (shareable PNG) |
 | M10 | Stretch | Manual gearbox + clutch, badges polish, map of England art, Capacitor wrapper notes |
