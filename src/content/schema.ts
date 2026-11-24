@@ -1,4 +1,4 @@
-import type { Rect, SignKind } from '../world/layout';
+import type { Rect, SignKind, SignPlacement } from '../world/layout';
 
 /**
  * Content schema. Lessons, quizzes and rule references are pure data so they
@@ -46,6 +46,8 @@ export interface SignRef {
   kind: SignKind;
   value?: number;
   caption?: string;
+  /** Exits for a roundabout map sign. */
+  map?: SignPlacement['map'];
 }
 
 export interface BriefingSlide {

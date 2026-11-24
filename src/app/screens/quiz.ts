@@ -57,7 +57,7 @@ export function quizScreen(s: LessonSession): Screen {
       });
       opts.append(b);
     });
-    const sign = q.sign ? h('div', { class: 'quiz-sign', html: signSvg({ kind: q.sign.kind, value: q.sign.value }, 96, 'Road sign for this question') }) : null;
+    const sign = q.sign ? h('div', { class: 'quiz-sign', html: signSvg({ kind: q.sign.kind, value: q.sign.value, map: q.sign.map }, 96, 'Road sign for this question') }) : null;
     body.replaceChildren(
       h('div', { class: 'muted', style: { fontWeight: '800' } }, `Question ${i + 1} of ${qs.length}`),
       h('div', { class: 'q-row' }, sign, h('div', { class: 'q' }, q.question)),

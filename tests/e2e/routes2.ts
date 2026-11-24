@@ -2,7 +2,9 @@
  * Scripted careful drives of the Week 2 (Mill Town) test routes. Like
  * routes.ts, but roundabout arcs come from the same helpers the lessons use.
  */
-import { R1, M1, rbArc } from '../../src/world/scenes/millTownLayout';
+import { R1, M1, MAGIC, rbArc } from '../../src/world/scenes/millTownLayout';
+
+const [MN, ME, MW] = MAGIC;
 
 type Pt = [number, number, number];
 type Step =
@@ -82,6 +84,35 @@ export const ROUTES2: Record<number, Step[]> = {
     { drive: [[30, -1.9, 7], [62, -1.9, 7]] },
     { act: 'signal', arg: 'off' },
     ...pullIn([[76, -2.4, 4], [82, -2.65, 0]]),
+    ...secure
+  ]
+  ,
+  9: [
+    { moveOff: 'right' },
+    { drive: [[198.1, -70, 6]] },
+    { act: 'signal', arg: 'off' },
+    { drive: [[198.1, -140, 7], [198.1, -150, 6]] },
+    // MN from Southway: turn right (third/last exit), signal right.
+    { act: 'mirror', arg: 'interior' },
+    { act: 'mirror', arg: 'right' },
+    { act: 'signal', arg: 'right' },
+    ...roundabout(MN, 'N', 'E'),
+    { drive: [[233, -176.9, 6], [236.6, -177.6, 4], [238.1, -181, 4], [238.1, -192, 5]] },
+    // ME: straight on, no signal.
+    { act: 'mirror', arg: 'interior' },
+    ...roundabout(ME, 'N', 'S'),
+    { drive: [[238.1, -249, 6], [237.4, -252.4, 4], [234, -253.1, 4], [166, -253.1, 7], [162.6, -252.4, 4], [161.9, -249, 4], [161.9, -236, 5]] },
+    // MW: straight on.
+    { act: 'mirror', arg: 'interior' },
+    ...roundabout(MW, 'S', 'N'),
+    { drive: [[161.9, -181, 6], [162.6, -177.6, 4], [166, -176.9, 4], [176, -176.9, 5]] },
+    // MN again, from the ring: right, back up Southway.
+    { act: 'mirror', arg: 'interior' },
+    { act: 'mirror', arg: 'right' },
+    { act: 'signal', arg: 'right' },
+    ...roundabout(MN, 'W', 'N'),
+    { drive: [[201.9, -150, 7], [201.9, -110, 8]] },
+    ...pullIn([[202.4, -94, 4], [202.65, -86, 0]]),
     ...secure
   ]
 };
