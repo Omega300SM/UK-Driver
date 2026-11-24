@@ -1,6 +1,6 @@
 import type { AiPath, Obstacle, SceneLayout } from '../world/layout';
 import { inRect, isDrivable, speedLimitAt } from '../world/layout';
-import type { ScriptedCar, TrafficLevel } from '../content/schema';
+import type { RoadUserKind, ScriptedCar, TrafficLevel } from '../content/schema';
 import { MPH_PER_MPS } from '../rules/types';
 import type { StreetControl } from './street';
 
@@ -26,7 +26,20 @@ export interface AiCar {
   s?: number;
   /** Removed at the next update (reached the edge of the map). */
   done?: boolean;
+  /** Car (default), cyclist or horse rider. */
+  kind?: RoadUserKind;
+  /** When it arrived at the give way it's waiting at (first come, first served). */
+  waitSince?: number;
+  /** Never faster than this (cyclists, horses). */
+  maxSpeed?: number;
 }
+
+/** Footprint (length, width) of each kind of road user, in metres. */
+export const ROAD_USER_SIZE: Record<RoadUserKind, { len: number; wid: number }> = {
+  car: { len: 4.2, wid: 1.8 },
+  bike: { len: 1.8, wid: 0.6 },
+  horse: { len: 2.6, wid: 0.9 }
+};
 
 export interface PlayerShape {
   x: number;
@@ -56,6 +69,7 @@ export class Traffic {
   private target = 0;
   /** Signals and crossings, when the scene has them. */
   street: StreetControl | null = null;
+  private clock = 0;
 
   constructor(
     private layout: SceneLayout,
@@ -87,7 +101,7 @@ export class Traffic {
     }
   }
 
-  private add(o: { x: number; z: number; heading: number; speed: number; looping: boolean; colour?: number }): AiCar {
+  private add(o: { x: number; z: number; heading: number; speed: number; looping: boolean; colour?: number; kind?: RoadUserKind }): AiCar {
     const alongX = Math.abs(Math.sin(o.heading)) > 0.7;
     const car: AiCar = {
       id: this.nextId++,
@@ -101,7 +115,9 @@ export class Traffic {
       lane: alongX ? o.z : o.x,
       waiting: false,
       braking: 0,
-      offset: 0
+      offset: 0,
+      kind: o.kind ?? 'car',
+      maxSpeed: o.kind && o.kind !== 'car' ? o.speed : undefined
     };
     this.cars.push(car);
     return car;
@@ -118,11 +134,12 @@ export class Traffic {
   }
 
   update(dt: number, player: PlayerShape): void {
+    this.clock += dt;
     // Release scripted cars when the player reaches their trigger area.
     for (let i = this.pending.length - 1; i >= 0; i--) {
       const p = this.pending[i];
       if (inRect(p.when, player.x, player.z)) {
-        this.add({ ...p.from, speed: p.speed, looping: false, colour: p.colour });
+        this.add({ ...p.from, speed: p.speed, looping: false, colour: p.colour, kind: p.kind });
         this.pending.splice(i, 1);
       }
     }
@@ -179,13 +196,32 @@ export class Traffic {
 
     // Give way at a roundabout entry (rule 185) or when joining a main road: wait if anyone will reach the merge point soon.
     c.waiting = false;
-    if ((rb || path.giveWay) && (c.s ?? 0) < 1.0) {
-      const merge = pointAt(path, Math.min(6, pathLength(path) / 3));
+    // Checked until the car is right at the line (a braking car may roll a little past the start).
+    if ((rb || path.giveWay) && (c.s ?? 0) < 1.8) {
+      // Where we join the circulating traffic: the first point on the ring (or a few metres into a junction).
+      const merge = rb ? { x: path.points[1][0], z: path.points[1][1] } : pointAt(path, Math.min(6, pathLength(path) / 3));
+      // On a big roundabout the way in also crosses the outer lane: check every point we cross on the ring.
+      const crossPts = [merge];
+      if (rb) {
+        const [ax, az] = path.points[0];
+        const len = Math.hypot(merge.x - ax, merge.z - az);
+        for (let d = 2; d < len; d += 2) {
+          const x = ax + ((merge.x - ax) * d) / len;
+          const z = az + ((merge.z - az) * d) / len;
+          if (Math.hypot(x - rb.x, z - rb.z) <= rb.outer) crossPts.push({ x, z });
+        }
+      }
       let clash = false;
+      if (c.speed < 0.5 && c.waitSince === undefined) c.waitSince = this.clock;
       for (const o of this.cars) {
         if (o === c) continue;
         if (Math.hypot(o.x - merge.x, o.z - merge.z) < 7) clash = true;
-        else if (o.speed > 0.2 && this.pathTimeTo(o, merge.x, merge.z, 3) < 3) clash = true;
+        for (const m of crossPts) {
+          if (clash) break;
+          if (o.speed > 0.2 && this.pathTimeTo(o, m.x, m.z, 3) < 3) clash = true;
+          // Someone who got to their own give way line first, and whose route crosses ours, goes first.
+          else if (o.speed <= 0.2 && o.waitSince !== undefined && o.waitSince < (c.waitSince ?? Infinity) && this.pathTimeTo(o, m.x, m.z, 3) < 4) clash = true;
+        }
       }
       const pd = Math.hypot(player.x - merge.x, player.z - merge.z);
       if (pd < 7) clash = true;
@@ -214,6 +250,7 @@ export class Traffic {
     c.speed = Math.max(0, a > 0 ? Math.min(target, c.speed + a * dt) : Math.max(target, c.speed + a * dt));
     c.braking = Math.max(0, (prev - c.speed) / dt);
 
+    if (!c.waiting && (c.s ?? 0) >= 1.8) c.waitSince = undefined;
     // Advance along the path, moving onto the next one at the end.
     c.s = (c.s ?? 0) + c.speed * dt;
     const len = pathLength(path);
@@ -236,7 +273,7 @@ export class Traffic {
   willGiveWay(c: AiCar): boolean {
     if (!c.path) return false;
     const yields = (p: AiPath) => !!(p.giveWay || p.yieldTo);
-    if (yields(c.path) && (c.s ?? 0) < 1) return true;
+    if (yields(c.path) && (c.s ?? 0) < 1.8) return true;
     const next = this.nextPaths(c.path);
     return pathLength(c.path) - (c.s ?? 0) < 40 && next.length > 0 && next.every(yields);
   }
@@ -305,7 +342,7 @@ export class Traffic {
     const rz = Math.sin(c.heading);
     const alongX = Math.abs(fx) > 0.7;
     const limit = speedLimitAt(this.layout, c.x, c.z) / MPH_PER_MPS;
-    c.cruise = Math.min(limit * 0.88, 17);
+    c.cruise = Math.min(limit * 0.88, 17, c.maxSpeed ?? Infinity);
 
     // Lane line we normally follow (without any passing offset).
     const laneX = alongX ? c.x : c.lane;
@@ -346,7 +383,8 @@ export class Traffic {
     // Pass a stationary obstruction only if nothing is coming the other way (rule 163).
     c.waiting = false;
     let wantOffset = 0;
-    if (stationaryAt < 18 && !queueing) {
+    if (stationaryAt < 18 && (c.kind ?? 'car') !== 'car') followGap = Math.min(followGap, stationaryAt - 2); // riders wait behind
+    else if (stationaryAt < 18 && !queueing) {
       let oncomingClear = true;
       for (const o of this.cars) {
         if (o === c || Math.cos(o.heading - c.heading) > -0.5) continue;
@@ -404,8 +442,9 @@ export class Traffic {
         return { kind: 'car' as const, x0: c.x - ex * 0.9, x1: c.x + ex * 0.9, z0: c.z - ez * 0.9, z1: c.z + ez * 0.9 };
       }
       const alongX = Math.abs(Math.sin(c.heading)) > 0.7;
-      const hl = LEN / 2;
-      const hw = WID / 2;
+      const size = ROAD_USER_SIZE[c.kind ?? 'car'];
+      const hl = size.len / 2;
+      const hw = size.wid / 2;
       return alongX
         ? { kind: 'car', x0: c.x - hl, x1: c.x + hl, z0: c.z - hw, z1: c.z + hw }
         : { kind: 'car', x0: c.x - hw, x1: c.x + hw, z0: c.z - hl, z1: c.z + hl };

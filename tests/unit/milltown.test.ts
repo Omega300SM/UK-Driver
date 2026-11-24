@@ -86,6 +86,23 @@ describe('Mill Town AI traffic', () => {
     expect(tr.cars.length).toBeGreaterThan(6);
   });
 
+  it('no overlaps with other random seeds either (roundabouts, lights, give ways)', () => {
+    for (const seed of [6, 9, 12]) {
+      const tr = new Traffic(MILL_TOWN, 'busy', [], seed);
+      const st = new StreetControl(MILL_TOWN, 'busy', seed * 7);
+      tr.street = st;
+      let overlaps = 0;
+      for (let i = 0; i < 90 * 30; i++) {
+        st.update(1 / 30, tr.cars, farAway);
+        tr.update(1 / 30, farAway);
+        if (i % 15) continue;
+        for (let a = 0; a < tr.cars.length; a++)
+          for (let b = a + 1; b < tr.cars.length; b++) if (Math.hypot(tr.cars[a].x - tr.cars[b].x, tr.cars[a].z - tr.cars[b].z) < 2.6) overlaps++;
+      }
+      expect(overlaps, `seed ${seed}`).toBe(0);
+    }
+  });
+
   it('a car about to join a roundabout gives way to a car already on it', () => {
     const tr = new Traffic(MILL_TOWN, 'none');
     const join = MILL_TOWN.aiPaths!.find((p) => p.yieldTo === 'R1' && Math.abs(p.points[0][1] - -18) < 1 && p.points[0][0] > 0)!; // from the south arm
