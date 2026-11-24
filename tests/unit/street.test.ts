@@ -140,8 +140,26 @@ describe('street rules', () => {
     expect(r.faults.map((f) => f.code)).toEqual(['bus-lane']);
   });
 
+  it('passing cyclists and horses (rules 163, 215)', () => {
+    const pass = (kind: 'bike' | 'horse', gap: number, mph: number) => faults({ type: 'passVulnerable', t: 1, kind, gap, speed: mph / 2.236936 });
+    expect(pass('bike', 1.8, 25)).toEqual([]);
+    expect(pass('bike', 1.1, 25)).toEqual(['pass-cyclist-close']);
+    expect(pass('bike', 1.6, 40)).toEqual(['pass-cyclist-close']); // more room needed when faster
+    expect(pass('bike', 0.4, 20)).toEqual(['pass-cyclist-dangerous']);
+    expect(pass('horse', 2.3, 8)).toEqual([]);
+    expect(pass('horse', 2.3, 18)).toEqual(['pass-horse']);
+    expect(pass('horse', 1.2, 8)).toEqual(['pass-horse']);
+  });
+
+  it('school crossing patrol and people crossing at a junction', () => {
+    expect(faults(ev({ kind: 'patrol', aspect: null, pedWaiting: true }))).toEqual(['patrol-stop']);
+    expect(faults(ev({ kind: 'patrol', aspect: null }))).toEqual([]);
+    expect(faults(ev({ kind: 'informal', aspect: null, pedsOn: 1 }))).toEqual(['junction-ped']);
+    expect(faults(ev({ kind: 'informal', aspect: null, pedWaiting: true }))).toEqual(['junction-ped-waiting']);
+  });
+
   it('every new fault cites rules that are in the rule references', () => {
-    for (const code of ['red-light', 'amber-light', 'zebra-give-way', 'zebra-waiting', 'crossing-ped', 'crossing-ped-dangerous', 'crossing-blocked', 'box-junction', 'bus-lane', 'park-zigzag'] as const) {
+    for (const code of Object.keys(FAULTS) as Array<keyof typeof FAULTS>) {
       for (const n of FAULTS[code].rules) expect(RULES[n], `${code} → rule ${n}`).toBeDefined();
     }
   });

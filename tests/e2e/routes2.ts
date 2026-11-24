@@ -184,4 +184,28 @@ export const ROUTES2: Record<number, Step[]> = {
     { reverse: [[63.5, -86.24, 1.2], [65.51, -88.25, 1.2], [66.25, -91, 1.1], [66.25, -94, 1], [66.25, -97.6, 0]] },
     ...secure
   ]
+  ,
+  // Day 13: left into the Ringway (people crossing go first), overtake the cyclist wide, school patrol, pull up.
+  13: [
+    { moveOff: 'right' },
+    { drive: [[-110, 1.9, 6]] },
+    { act: 'signal', arg: 'off' },
+    { drive: [[-132, 1.9, 8]] },
+    { act: 'mirror', arg: 'interior' },
+    { act: 'mirror', arg: 'left' },
+    { act: 'signal', arg: 'left' },
+    { drive: [[-142, 1.9, 5], [-146.4, 2.7, 3.5], [-148.1, 6, 3.5], [-148.1, 8.2, 3]] },
+    { act: 'signal', arg: 'off' },
+    { drive: [[-148.1, 18, 5]] },
+    // The cyclist is just ahead: check, then pass wide (well over 1.5 m) and pull back in.
+    { act: 'mirror', arg: 'interior' },
+    { act: 'mirror', arg: 'right' },
+    { act: 'signal', arg: 'right' },
+    { drive: [[-150.6, 30, 8.6], [-150.6, 64, 8.6]] },
+    { act: 'signal', arg: 'off' },
+    { act: 'mirror', arg: 'interior' },
+    { drive: [[-149.2, 72, 8], [-148.1, 80, 7], [-148.1, 140, 7.5], [-148.1, 168, 6], [-147.6, 174.6, 4], [-145, 177.6, 4], [-136, 178.1, 6]] },
+    ...pullIn([[-122, 178, 5], [-112, 177.45, 3], [-108, 177.35, 0]]),
+    ...secure
+  ]
 };

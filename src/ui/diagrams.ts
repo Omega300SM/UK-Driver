@@ -56,6 +56,12 @@ export function diagram(id: DiagramId): string {
       return busLaneDiagram();
     case 'bay-park':
       return bayPark();
+    case 'hierarchy':
+      return hierarchy();
+    case 'passing-distances':
+      return passingDistances();
+    case 'h2-junction':
+      return h2Junction();
     case 'parallel-park':
       return parallelPark();
     default:
@@ -428,4 +434,52 @@ function parallelPark(): string {
     <polygon points="122,116 122,128 110,122" fill="#ffd23f"/>
     <text x="12" y="20" font-family="system-ui" font-weight="800" font-size="12.5" fill="#fff">Alongside the red car, a metre out → reverse → steer in → steer out</text>
     <text x="12" y="164" font-family="system-ui" font-size="10.5" fill="#fff">Finish close to the kerb, straight, facing the traffic flow (rule 239)</text></svg>`;
+}
+
+function hierarchy(): string {
+  const rows: Array<[string, string, number]> = [
+    ['Pedestrians', '#2f8a5f', 300],
+    ['Cyclists · horse riders', '#2e5c8a', 250],
+    ['Motorcyclists', '#7a4f9a', 200],
+    ['Cars · taxis', '#d9a22e', 150],
+    ['Vans · buses · lorries', '#b8352f', 100]
+  ];
+  return `<svg viewBox="0 0 340 170" role="img" aria-label="The hierarchy of road users: those who can do the greatest harm have the greatest responsibility. Pedestrians at the top, then cyclists and horse riders, motorcyclists, cars, and large vehicles."><rect width="340" height="170" rx="12" fill="#1f6f4a"/>
+    ${rows
+      .map(([label, col, w], i) => `<rect x="${170 - w / 2}" y="${14 + i * 28}" width="${w}" height="24" rx="5" fill="${col}"/><text x="170" y="${31 + i * 28}" font-family="system-ui" font-weight="800" font-size="12" text-anchor="middle" fill="#fff">${label}</text>`)
+      .join('')}
+    <text x="12" y="30" font-family="system-ui" font-size="10" fill="#e8f3ec">Most at risk</text>
+    <text x="12" y="146" font-family="system-ui" font-size="10" fill="#e8f3ec">Most</text><text x="12" y="158" font-family="system-ui" font-size="10" fill="#e8f3ec">responsibility</text></svg>`;
+}
+
+function passingDistances(): string {
+  const bike = (x: number, y: number) => `<g transform="translate(${x},${y})"><rect x="-14" y="-3" width="28" height="6" rx="3" fill="#2b2f36"/><circle r="6" cy="-6" fill="#d6f22b"/></g>`;
+  const horse = (x: number, y: number) => `<g transform="translate(${x},${y})"><rect x="-20" y="-6" width="40" height="12" rx="5" fill="#6b4a2e"/><circle r="6" cy="-9" fill="#d6f22b"/></g>`;
+  return svg(
+    `<rect x="0" y="28" width="340" height="120" fill="#50545a"/>${centre(88)}
+    ${bike(90, 132)}${car(90, 96, '#2f8a5f', 0)}
+    <line x1="64" y1="108" x2="64" y2="128" stroke="#ffd23f" stroke-width="2"/><text x="20" y="122" font-family="system-ui" font-weight="800" font-size="12" fill="#ffd23f">1.5 m</text>
+    ${horse(250, 132)}${car(250, 90, '#2f8a5f', 0)}
+    <line x1="222" y1="102" x2="222" y2="126" stroke="#ffd23f" stroke-width="2"/><text x="178" y="118" font-family="system-ui" font-weight="800" font-size="12" fill="#ffd23f">2 m</text>
+    <text x="12" y="20" font-family="system-ui" font-weight="800" font-size="12.5" fill="#fff">Cyclists: 1.5 m+ at up to 30 mph</text>
+    <text x="190" y="20" font-family="system-ui" font-weight="800" font-size="12.5" fill="#fff">Horses: 2 m+, under 10 mph</text>
+    <text x="12" y="164" font-family="system-ui" font-size="10.5" fill="#fff">Not enough room? Wait behind (rules 163, 212, 215).</text>`,
+    'Passing distances: at least 1.5 metres for cyclists at up to 30 mph, and at least 2 metres at under 10 mph for horse riders',
+    170
+  );
+}
+
+function h2Junction(): string {
+  return svg(
+    `${road(96, 60)}<rect x="140" y="0" width="60" height="96" fill="#50545a"/>${centre(126)}
+    <rect x="128" y="36" width="12" height="14" fill="#c9a27a"/><rect x="200" y="36" width="12" height="14" fill="#c9a27a"/>
+    ${person(158, 46)}${person(176, 46, '#9fc3d6')}
+    ${car(96, 140, '#2f8a5f', 0)}
+    <path d="M120 140 Q166 136 170 104" stroke="#ffd23f" stroke-width="3" fill="none" stroke-dasharray="6 4"/>
+    <text x="210" y="40" font-family="system-ui" font-weight="800" font-size="12" fill="#fff">People crossing</text>
+    <text x="210" y="56" font-family="system-ui" font-weight="800" font-size="12" fill="#fff">the side road</text>
+    <text x="210" y="72" font-family="system-ui" font-weight="800" font-size="12" fill="#ffd23f">go first (H2)</text>`,
+    'Rule H2: when turning into or out of a side road, give way to pedestrians crossing or waiting to cross it',
+    170
+  );
 }

@@ -49,6 +49,9 @@ export type DiagramId =
   | 'bus-lane'
   | 'bay-park'
   | 'parallel-park'
+  | 'hierarchy'
+  | 'passing-distances'
+  | 'h2-junction'
   | 'none';
 
 /** A road sign drawn from the procedural sign set. */
