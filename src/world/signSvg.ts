@@ -24,6 +24,7 @@ export function signAspect(kind: SignKind): number {
   if (kind === 'name') return 3.6;
   if (kind === 'roundabout-map') return 1.4;
   if (kind === 'warn-giveway-ahead') return 0.86;
+  if (kind === 'bus-lane') return 0.8;
   return 1;
 }
 
@@ -133,6 +134,21 @@ function body(spec: SignSpec): string {
         <line x1="${cx}" y1="96" x2="${cx}" y2="${cy + 11}" stroke="#111" stroke-width="7"/>
         <circle cx="${cx}" cy="${cy}" r="10" fill="none" stroke="#111" stroke-width="6"/>${arms}`;
     }
+    case 'warn-signals':
+      return triangle(`<rect x="41" y="34" width="18" height="44" rx="4" fill="#111"/>
+        <circle cx="50" cy="43" r="5.5" fill="${RED}"/><circle cx="50" cy="56" r="5.5" fill="#f2b705"/><circle cx="50" cy="69" r="5.5" fill="#1f9d55"/>`);
+    case 'warn-pedestrians':
+      // A person walking across a striped crossing.
+      return triangle(`<circle cx="52" cy="38" r="5" fill="#111"/>
+        <path d="M51 44 L47 60 M50 50 L58 56 M50 50 L42 54 M47 60 L54 72 M47 60 L40 70" stroke="#111" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <rect x="26" y="74" width="48" height="4" fill="#111"/>`);
+    case 'bus-lane':
+      return `<rect x="2" y="2" width="76" height="96" rx="6" fill="#1d4f9c" stroke="#fff" stroke-width="3"/>
+        <rect x="14" y="20" width="40" height="26" rx="4" fill="#fff"/><rect x="18" y="24" width="10" height="9" fill="#1d4f9c"/><rect x="31" y="24" width="10" height="9" fill="#1d4f9c"/><rect x="44" y="24" width="7" height="9" fill="#1d4f9c"/>
+        <circle cx="23" cy="48" r="4" fill="#fff"/><circle cx="45" cy="48" r="4" fill="#fff"/>
+        <path d="M64 50 L64 20 M58 28 L64 18 L70 28" stroke="#fff" stroke-width="4" fill="none"/>
+        <text x="40" y="70" font-family="${FONT}" font-weight="700" font-size="13" text-anchor="middle" fill="#fff">BUS LANE</text>
+        <text x="40" y="88" font-family="${FONT}" font-weight="700" font-size="10" text-anchor="middle" fill="#fff">${esc(spec.text ?? 'At any time')}</text>`;
     case 'name':
       return `<rect x="3" y="12" width="354" height="76" rx="6" fill="#fff" stroke="#111" stroke-width="5"/>
         <text x="180" y="64" font-family="${FONT}" font-weight="700" font-size="40" text-anchor="middle" fill="#111">${esc(spec.text ?? '')}</text>`;
@@ -171,6 +187,12 @@ export function signName(spec: SignSpec): string {
       return 'Mini-roundabout (give way to traffic from the immediate right)';
     case 'roundabout-map':
       return 'Advance direction sign for a roundabout';
+    case 'warn-signals':
+      return 'Traffic signals ahead';
+    case 'warn-pedestrians':
+      return 'Pedestrian crossing ahead';
+    case 'bus-lane':
+      return 'Bus lane ahead (times shown)';
     case 'name':
       return spec.text ?? 'Street name';
   }

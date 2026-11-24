@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import type { BuiltScene } from './carPark';
 import { MILL_TOWN, ROADS, R1, R2, M1, MAGIC, MAGIC_CENTRE, MAGIC_HALF_SIZE, R2_FLARE, H } from './millTownLayout';
-import type { Lane, Roundabout } from '../layout';
+import { isDrivable, type Lane, type Roundabout } from '../layout';
+import { buildStreet } from '../street3d';
 import { instanced, lambert, baseBox, roofPrism, rng, type Placement } from '../props';
 import { fascia } from '../signs';
 import { markerMeshes, hintPathFactory, flat, addMarkings, signPost } from '../common';
@@ -49,6 +50,7 @@ export function buildMillTown(): BuiltScene {
   root.add(magicSign);
 
   addMarkings(root, L.markings ?? []);
+  const street = buildStreet(root, L);
   addSpiral(root, R2);
   addLaneArrows(root);
 
@@ -106,7 +108,12 @@ export function buildMillTown(): BuiltScene {
   terrace(ROADS.ringway, 1, -136, -20);
   terrace(ROADS.ringway, 1, 20, 186);
   terrace(ROADS.ringwayE, 1, 40, 166);
-  terrace(ROADS.canalSide, -1, 20, 180);
+  terrace(ROADS.canalSide, -1, 20, 86);
+  terrace(ROADS.canalSide, -1, 114, 180);
+  terrace(ROADS.bridge, -1, -205, -142);
+  terrace(ROADS.bridge, 1, -205, -142, { shop: true, h: 8 });
+  terrace(ROADS.bridge, -1, -116, -46);
+  terrace(ROADS.bridge, 1, -116, -46);
   root.add(instanced(box, lambert(0xffffff), walls));
   root.add(instanced(roofPrism(), lambert(0x4a4f57), roofs));
   root.add(instanced(box, lambert(0x7a3b2c), chimneys));
@@ -190,6 +197,7 @@ export function buildMillTown(): BuiltScene {
   const trunks: Placement[] = [];
   const crowns: Placement[] = [];
   const tree = (x: number, z: number, s = 0.8 + r() * 0.6) => {
+    if (isDrivable(L, x, z) || isDrivable(L, x + 2, z) || isDrivable(L, x - 2, z) || isDrivable(L, x, z + 2) || isDrivable(L, x, z - 2)) return;
     trunks.push({ x, z, sx: 0.4 * s, sy: 2.4 * s, sz: 0.4 * s });
     crowns.push({ x, y: 2 * s, z, sx: 3.4 * s, sy: 3.6 * s, sz: 3.4 * s, color: r() < 0.5 ? 0x4c7a34 : 0x5d8a3c });
   };
@@ -225,7 +233,7 @@ export function buildMillTown(): BuiltScene {
   root.add(instanced(new THREE.IcosahedronGeometry(0.6, 1), new THREE.MeshBasicMaterial({ color: 0xeef0f2, fog: false }), clouds));
 
   const mk = markerMeshes(root, L);
-  return { layout: L, root, markers: mk.markers, setMarker: mk.setMarker, setHintPath: hintPathFactory(root), update: mk.update };
+  return { layout: L, root, markers: mk.markers, setMarker: mk.setMarker, setHintPath: hintPathFactory(root), update: mk.update, updateStreet: street.update };
 }
 
 function addRoundabout(root: THREE.Group, rb: Roundabout): void {

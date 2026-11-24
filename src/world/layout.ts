@@ -28,7 +28,7 @@ export interface SpeedZone extends Rect {
 }
 
 export interface Obstacle extends Rect {
-  kind: 'car' | 'shelter' | 'gate' | 'bollard' | 'van';
+  kind: 'car' | 'shelter' | 'gate' | 'bollard' | 'van' | 'pedestrian';
   color?: number;
 }
 
@@ -67,6 +67,9 @@ export type SignKind =
   | 'warn-roundabout'
   | 'mini-roundabout'
   | 'roundabout-map'
+  | 'warn-signals'
+  | 'warn-pedestrians'
+  | 'bus-lane'
   | 'name';
 
 /** Data for an advance direction ("map") sign: the roundabout drawn from the driver's point of view. */
@@ -138,6 +141,62 @@ export interface AiPath {
   yieldTo?: string;
   /** AI cars may be created at the start of this path. */
   spawn?: boolean;
+  /** Give way before starting this path (joining a main road from a side road). */
+  giveWay?: boolean;
+}
+
+/**
+ * A line traffic must stop behind when a signal (or a pedestrian on a
+ * crossing) says so. (x, z) is the middle of the line in the lane it
+ * controls; traffic heading `heading` stops before it.
+ */
+export interface StopLine {
+  id: string;
+  x: number;
+  z: number;
+  heading: number;
+  /** Signal controller and group (traffic lights / signal-controlled crossings). */
+  signal?: { controller: string; group: string };
+  /** Pedestrian crossing this line protects. */
+  crossing?: string;
+}
+
+export type CrossingKind = 'zebra' | 'pelican' | 'puffin' | 'toucan';
+
+/** A pedestrian crossing across a straight road. */
+export interface Crossing {
+  id: string;
+  kind: CrossingKind;
+  name: string;
+  /** The striped / studded walking area across the carriageway. */
+  area: Rect;
+  /** Axis of the road it crosses ('x' = road runs along x, people walk along z). */
+  axis: 'x' | 'z';
+  /** Signal controller for pelican / puffin / toucan crossings. */
+  controller?: string;
+  /** Zig-zag areas either side (no stopping, no overtaking: rule 191). */
+  zigzag: Rect[];
+}
+
+/** Traffic signals: a junction (two groups that take turns) or a signal-controlled crossing. */
+export interface SignalController {
+  id: string;
+  kind: 'junction' | CrossingKind;
+  /** Traffic groups, e.g. ['ew', 'ns'] at a crossroads or ['road'] at a crossing. */
+  groups: string[];
+  /** Signal heads to draw: position, the heading of drivers who read it, and its group. */
+  heads: Array<{ x: number; z: number; faces: number; group: string }>;
+}
+
+/** Yellow criss-cross box (rule 174). */
+export interface BoxJunction extends Rect {
+  id: string;
+}
+
+/** A bus lane (rule 141): traffic heading `heading` should keep out. */
+export interface BusLane extends Rect {
+  heading: number;
+  hours: string;
 }
 
 export interface SceneLayout {
@@ -164,6 +223,11 @@ export interface SceneLayout {
   roundabouts?: Roundabout[];
   /** Lane centre lines for path-following AI (scenes without them use straight-lane AI). */
   aiPaths?: AiPath[];
+  stopLines?: StopLine[];
+  crossings?: Crossing[];
+  signals?: SignalController[];
+  boxes?: BoxJunction[];
+  busLanes?: BusLane[];
 }
 
 /** Polar angle of (x, z) about a roundabout centre, in the same convention as headings. */

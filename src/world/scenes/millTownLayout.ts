@@ -12,7 +12,7 @@
  * Roundabouts circulate clockwise seen from above: heading = θ − π/2 at polar
  * angle θ, so the island is on your right.
  */
-import type { AiPath, Junction, Lane, Marker, Marking, Obstacle, Rect, Roundabout, SceneLayout, SignPlacement } from '../layout';
+import type { AiPath, Crossing, Junction, Lane, Marker, Marking, Obstacle, Rect, Roundabout, SceneLayout, SignalController, SignPlacement, StopLine } from '../layout';
 
 export const H = 3.8;
 export const LANE = 1.9;
@@ -115,7 +115,8 @@ export const ROADS = {
   ringE: lz('Ring', MAGIC_C.x + MAGIC_HALF, MAGIC_C.z - MAGIC_HALF - H, MAGIC_C.z + MAGIC_HALF + H),
   ringWst: lz('Ring', MAGIC_C.x - MAGIC_HALF, MAGIC_C.z - MAGIC_HALF - H, MAGIC_C.z + MAGIC_HALF + H),
   gasworks: lx('Gasworks Lane', MAGIC_C.z, MAGIC_C.x + MAGIC_HALF + 7, 300),
-  wharf: lx('Wharf Street', MAGIC_C.z, 110, MAGIC_C.x - MAGIC_HALF - 7)
+  wharf: lx('Wharf Street', MAGIC_C.z, 100, MAGIC_C.x - MAGIC_HALF - 7),
+  bridge: lz('Bridge Street', 100, MAGIC_C.z, -40)
 };
 
 const CORNER_R = 5;
@@ -143,18 +144,28 @@ const bend = (x: number, z: number): Rect => ({ x0: x - H, x1: x + H, z0: z - H,
 /** Mill Road widens to two lanes on the approach to R2 (left lane: left/ahead; right lane: right/ahead). */
 export const R2_FLARE: Rect = { x0: 140, x1: 180, z0: -H - 3.8, z1: -H };
 
+/** Bridge Street traffic lights (J1), with a yellow box junction. */
+export const J1 = { x: 100, z: -130 };
+/** Westbound bus lane on Canal Side, at the kerb (rule 141). */
+export const BUS_LANE: Rect = { x0: 120, x1: 186, z0: -130 + H, z1: -130 + H + 3.8 };
+
 const drivable: Rect[] = [
   ...Object.values(ROADS),
   R2_FLARE,
   bend(-150, 180),
   bend(200, 180),
   bend(0, -130),
+  bend(100, MAGIC_C.z),
+  BUS_LANE,
   // Junction mouths and bends get rounded kerbs.
   ...filletsZ(-150, H, 1), // Ringway (west) meets Mill Road
   ...filletsX(-130, 200 - H, -1), // Canal Side meets Southway
   ...filletsZ(-150, 180 - H, -1, CORNER_R, 5, 'high'), // inside of the north-west bend
   ...filletsZ(200, 180 - H, -1, CORNER_R, 5, 'low'), // inside of the north-east bend
   ...filletsZ(0, -130 + H, 1, CORNER_R, 5, 'high'), // inside of the Station Road / Canal Side bend
+  ...filletsZ(100, -130 + H, 1), // Bridge Street lights: north corners
+  ...filletsZ(100, -130 - H, -1), // and south corners
+  ...filletsZ(100, MAGIC_C.z + H, 1, CORNER_R, 5, 'high'), // inside of the Bridge Street / Wharf Street bend
   // Magic ring corners (inside and outside).
   ...[
     [MAGIC_C.x - MAGIC_HALF, MAGIC_C.z + MAGIC_HALF],
@@ -201,7 +212,15 @@ const pavements: Rect[] = [
   ...pavementsAlong({ ...ROADS.ringwayE, z1: 180 - H - PAVE }),
   ...pavementsAlong({ ...ROADS.ringway, x0: -150 + H + PAVE, x1: -9 }),
   ...pavementsAlong({ ...ROADS.ringway, x0: 9, x1: 200 - H - PAVE }),
-  ...pavementsAlong({ ...ROADS.canalSide, x0: H + PAVE, x1: 200 - H - CORNER_R - 0.3 }),
+  // Canal Side: the north pavement steps back behind the bus lane.
+  ...pavementsAlong({ ...ROADS.canalSide, x0: H + PAVE, x1: 200 - H - CORNER_R - 0.3 }, [mouthGap(100)]).filter((r) => r.z0 < -130),
+  ...[
+    [H + PAVE, 100 - H - CORNER_R - 0.3],
+    [100 + H + CORNER_R + 0.3, BUS_LANE.x0],
+    [BUS_LANE.x1, 200 - H - CORNER_R - 0.3]
+  ].map(([x0, x1]) => ({ x0, x1, z0: -130 + H, z1: -130 + H + PAVE })),
+  { x0: BUS_LANE.x0, x1: BUS_LANE.x1, z0: BUS_LANE.z1, z1: BUS_LANE.z1 + PAVE },
+  ...pavementsAlong({ ...ROADS.bridge, z0: MAGIC_C.z + H + CORNER_R + 0.3 }, [mouthGap(-130)]),
   ...pavementsAlong({ ...ROADS.southway, z1: -24 }, [mouthGap(-130)])
 ];
 
@@ -307,11 +326,6 @@ path(laneLine(centreOf(M1, S), centreIn(R1, N)));
 // Ringway west from M1: AI leaves the map here (quiet residential).
 path(laneLine(centreOf(M1, W), [-120, 180]));
 path(laneLine([-120, 180], centreIn(M1, W)), { spawn: true });
-// Station Road and Southway stubs.
-path(laneLine(centreOf(R1, S), [0, -110]));
-path(laneLine([0, -110], centreIn(R1, S)), { spawn: true });
-path(laneLine(centreOf(R2, S), [200, -110]));
-path(laneLine([200, -110], centreIn(R2, S)), { spawn: true });
 
 /** Left-lane line along a centre-line polyline, with corners chamfered so cars turn smoothly. */
 function lanePath(centre: P[], chamfer = 3.4): P[] {
@@ -340,8 +354,8 @@ function lanePath(centre: P[], chamfer = 3.4): P[] {
   const cx = MAGIC_C.x;
   const cz = MAGIC_C.z;
   const hf = MAGIC_HALF;
-  path(laneLine([200, -110], centreIn(mn, N)));
-  path(laneLine(centreOf(mn, N), [200, -110]));
+  path(laneLine([200, -142], centreIn(mn, N)));
+  path(laneLine(centreOf(mn, N), [200, -142]));
   const ring: Array<[P[], boolean?]> = [
     [[centreOf(mn, W), [cx - hf, cz + hf], centreIn(mw, N)]],
     [[centreOf(mw, N), [cx - hf, cz + hf], centreIn(mn, W)]],
@@ -351,13 +365,74 @@ function lanePath(centre: P[], chamfer = 3.4): P[] {
     [[centreOf(mw, S), [cx - hf, cz - hf], [cx + hf, cz - hf], centreIn(me, S)]],
     [[centreOf(me, E), [298, cz]]],
     [[[298, cz], centreIn(me, E)], true],
-    [[centreOf(mw, W), [112, cz]]],
-    [[[112, cz], centreIn(mw, W)], true]
   ];
   for (const [pts, spawn] of ring) path(lanePath(pts), spawn ? { spawn: true } : {});
   for (const rb of MAGIC) {
     for (const a of rb.arms) for (const b of rb.arms) if (a !== b) path(roundaboutPath(rb, a.angle, b.angle), { yieldTo: rb.id });
   }
+}
+
+/** Smooth lane curve from a (heading ha) to b (heading hb), for turns through a junction. */
+function curve(a: P, ha: number, b: P, hb: number, n = 8): P[] {
+  const k = Math.hypot(b[0] - a[0], b[1] - a[1]) * 0.55;
+  const c1 = add(a, scale(dirOf(ha), k));
+  const c2 = add(b, scale(dirOf(hb), -k));
+  const out: P[] = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const u = 1 - t;
+    out.push([
+      u * u * u * a[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * b[0],
+      u * u * u * a[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * b[1]
+    ]);
+  }
+  return out;
+}
+
+// South side: Station Road – Canal Side – Bridge Street lights (J1) – Southway, and Bridge Street down to Wharf Street.
+{
+  const J: P = [100, -130];
+  const ARM = 12;
+  /** Lane point on an arm: `out` = leaving the junction along `angle`, else arriving from that arm. */
+  const armLane = (angle: number, out: boolean): P => {
+    const h = out ? angle : angle + Math.PI;
+    return add(add(J, scale(dirOf(angle), ARM)), scale(leftOf(h), LANE));
+  };
+  // Arms with AI traffic (Bridge Street north is a dead end for now).
+  const arms = [W, E, S];
+  for (const a of arms) {
+    for (const b of arms) {
+      if (a === b) continue;
+      const hin = a + Math.PI;
+      let turn = b - hin;
+      while (turn > Math.PI) turn -= 2 * Math.PI;
+      while (turn < -Math.PI) turn += 2 * Math.PI;
+      // Straight on or left only (no right turns across oncoming traffic for AI).
+      if (Math.abs(turn) < 0.1) path([armLane(a, false), armLane(b, true)]);
+      else if (Math.abs(turn - Math.PI / 2) < 0.1) path(curve(armLane(a, false), hin, armLane(b, true), b));
+    }
+  }
+  // West arm ↔ Canal Side ↔ Station Road ↔ R1.
+  path(lanePath([centreOf(R1, S), [0, -130], [J[0] - ARM, J[1]]]));
+  path(lanePath([[J[0] - ARM, J[1]], [0, -130], centreIn(R1, S)]));
+  // East arm ↔ Southway (T-junction: Canal Side gives way).
+  path(lanePath([[J[0] + ARM, J[1]], [188, -130]]));
+  path(lanePath([[188, -130], [J[0] + ARM, J[1]]]));
+  const tIn = add([188, -130], scale(leftOf(E), LANE)); // eastbound, arriving at the T
+  const tOut = add([188, -130], scale(leftOf(W), LANE)); // westbound, leaving the T
+  const swSouthN = add([200, -118], scale(leftOf(S), LANE)); // Southway southbound, north of the T
+  const swSouthS = add([200, -142], scale(leftOf(S), LANE)); // Southway southbound, south of the T
+  path(curve(tIn, E, swSouthS, S), { giveWay: true });
+  path(curve(swSouthN, S, tOut, W));
+  // Southway through the T.
+  path(laneLine(centreOf(R2, S), [200, -118]));
+  path(laneLine([200, -118], [200, -142]));
+  path(laneLine([200, -142], [200, -118]));
+  path(laneLine([200, -118], centreIn(R2, S)), { spawn: true });
+  // South arm ↔ Bridge Street ↔ Wharf Street ↔ MW.
+  const mw = MAGIC[2];
+  path(lanePath([[J[0], J[1] - ARM], [100, MAGIC_C.z], centreIn(mw, W)]));
+  path(lanePath([centreOf(mw, W), [100, MAGIC_C.z], [J[0], J[1] - ARM]]));
 }
 
 // ---- Markings ----------------------------------------------------------------
@@ -399,6 +474,17 @@ const signs: SignPlacement[] = [
   { kind: 'name', text: 'Ringway', x: 186, z: H + 22, faces: N },
   { kind: 'zone20', x: 200 - H - 1.2, z: -158, faces: S },
   { kind: 'zone20-end', x: 200 + H + 1.2, z: -158, faces: N },
+  { kind: 'warn-signals', x: 70, z: -130 - H - 1.6, faces: E },
+  { kind: 'warn-signals', x: 135, z: BUS_LANE.z1 + 1.6, faces: W },
+  { kind: 'warn-signals', x: 100 + H + 1.6, z: -152, faces: N },
+  { kind: 'warn-pedestrians', x: 20, z: -130 - H - 1.6, faces: E },
+  { kind: 'warn-pedestrians', x: 75, z: -130 + H + 1.6, faces: W },
+  { kind: 'bus-lane', x: 189, z: -130 + H + 1.4, faces: W, text: 'At any time' },
+  { kind: 'name', text: 'Bridge Street', x: 100 + H + 1.6, z: -146, faces: N },
+  { kind: 'name', text: 'Canal Side', x: 30, z: -130 + H + 1.6, faces: W },
+  { kind: 'name', text: 'Wharf Street', x: 125, z: MAGIC_C.z + H + 1.6, faces: W },
+  { kind: 'zone20', x: 140, z: MAGIC_C.z - H - 1.2, faces: E },
+  { kind: 'zone20-end', x: 140, z: MAGIC_C.z + H + 1.2, faces: W },
   { kind: 'name', text: 'The Magic Roundabout', x: 200 - H - 1.6, z: MAGIC_C.z + MAGIC_HALF + 16, faces: S }
 ];
 // Advance direction signs ("map" signs) on the approaches to R1 and R2.
@@ -454,11 +540,121 @@ const markers: Marker[] = [
   { id: 'southway-s', label: '', x0: 200 - H, x1: 200, z0: -120, z1: -40 }
 ];
 
+// ---- Signals, crossings and stop lines (rules 175–178, 191–199) ----------------
+const crossings: Crossing[] = [
+  {
+    id: 'P1',
+    kind: 'pelican',
+    name: 'Station Road pelican crossing',
+    area: { x0: -H, x1: H, z0: -112, z1: -108 },
+    axis: 'z',
+    controller: 'P1',
+    zigzag: [
+      { x0: -H, x1: H, z0: -122, z1: -113.7 },
+      { x0: -H, x1: H, z0: -106.3, z1: -98 }
+    ]
+  },
+  {
+    id: 'Z1',
+    kind: 'zebra',
+    name: 'Canal Side zebra crossing',
+    area: { x0: 43, x1: 47, z0: -130 - H, z1: -130 + H },
+    axis: 'x',
+    zigzag: [
+      { x0: 33, x1: 41.6, z0: -130 - H, z1: -130 + H },
+      { x0: 48.4, x1: 57, z0: -130 - H, z1: -130 + H }
+    ]
+  },
+  {
+    id: 'U1',
+    kind: 'puffin',
+    name: 'Bridge Street puffin crossing',
+    area: { x0: 100 - H, x1: 100 + H, z0: -177, z1: -173 },
+    axis: 'z',
+    controller: 'U1',
+    zigzag: [
+      { x0: 100 - H, x1: 100 + H, z0: -187, z1: -178.7 },
+      { x0: 100 - H, x1: 100 + H, z0: -171.3, z1: -163 }
+    ]
+  }
+];
+const signals: SignalController[] = [
+  {
+    id: 'J1',
+    kind: 'junction',
+    groups: ['ew', 'ns'],
+    heads: [
+      { x: 91, z: -130 - H - 0.9, faces: E, group: 'ew' },
+      { x: 109, z: -130 + H + 0.9, faces: W, group: 'ew' },
+      { x: 100 + H + 0.9, z: -139, faces: N, group: 'ns' },
+      { x: 100 - H - 0.9, z: -121, faces: S, group: 'ns' }
+    ]
+  },
+  {
+    id: 'P1',
+    kind: 'pelican',
+    groups: ['road'],
+    heads: [
+      { x: -H - 0.9, z: -105, faces: S, group: 'road' },
+      { x: H + 0.9, z: -115, faces: N, group: 'road' }
+    ]
+  },
+  {
+    id: 'U1',
+    kind: 'puffin',
+    groups: ['road'],
+    heads: [
+      { x: 100 - H - 0.9, z: -170, faces: S, group: 'road' },
+      { x: 100 + H + 0.9, z: -180, faces: N, group: 'road' }
+    ]
+  }
+];
+const sig = (controller: string, group: string) => ({ controller, group });
+const stopLines: StopLine[] = [
+  { id: 'J1-e', x: 94.2, z: -130 - LANE, heading: E, signal: sig('J1', 'ew') },
+  { id: 'J1-w', x: 105.8, z: -130 + LANE, heading: W, signal: sig('J1', 'ew') },
+  { id: 'J1-n', x: 100 + LANE, z: -135.8, heading: N, signal: sig('J1', 'ns') },
+  { id: 'J1-s', x: 100 - LANE, z: -124.2, heading: S, signal: sig('J1', 'ns') },
+  { id: 'P1-s', x: -LANE, z: -106.3, heading: S, signal: sig('P1', 'road'), crossing: 'P1' },
+  { id: 'P1-n', x: LANE, z: -113.7, heading: N, signal: sig('P1', 'road'), crossing: 'P1' },
+  { id: 'Z1-e', x: 41.6, z: -130 - LANE, heading: E, crossing: 'Z1' },
+  { id: 'Z1-w', x: 48.4, z: -130 + LANE, heading: W, crossing: 'Z1' },
+  { id: 'U1-s', x: 100 - LANE, z: -171.3, heading: S, signal: sig('U1', 'road'), crossing: 'U1' },
+  { id: 'U1-n', x: 100 + LANE, z: -178.7, heading: N, signal: sig('U1', 'road'), crossing: 'U1' }
+];
+// No centre line across crossings or the box junction.
+{
+  const gaps = [...crossings.map((c) => c.area), { x0: 100 - H, x1: 100 + H, z0: -130 - H, z1: -130 + H }].map((r) => grow2(r, 0.6));
+  for (const g of gaps) {
+    for (let i = markings.length - 1; i >= 0; i--) {
+      const m = markings[i];
+      if (m.kind !== 'centre') continue;
+      const alongX = m.z0 === m.z1;
+      if (alongX ? m.z0 < g.z0 || m.z0 > g.z1 : m.x0 < g.x0 || m.x0 > g.x1) continue;
+      const [a0, a1] = alongX ? [Math.min(m.x0, m.x1), Math.max(m.x0, m.x1)] : [Math.min(m.z0, m.z1), Math.max(m.z0, m.z1)];
+      const [g0, g1] = alongX ? [g.x0, g.x1] : [g.z0, g.z1];
+      if (g1 <= a0 || g0 >= a1) continue;
+      markings.splice(i, 1);
+      const mk = (b0: number, b1: number) => (alongX ? { kind: m.kind, x0: b0, x1: b1, z0: m.z0, z1: m.z0 } : { kind: m.kind, x0: m.x0, x1: m.x0, z0: b0, z1: b1 });
+      if (g0 > a0) markings.push(mk(a0, g0));
+      if (g1 < a1) markings.push(mk(g1, a1));
+    }
+  }
+}
+for (const l of stopLines) {
+  // Paint across the lane: solid stop lines at signals, give way dashes at a zebra.
+  const fx = Math.sin(l.heading);
+  const fz = Math.cos(l.heading);
+  const [lx2, lz2] = [fz * LANE, -fx * LANE];
+  const kind = l.signal ? 'stop' : 'giveway';
+  seg(kind, l.x - lx2, l.z - lz2, l.x + lx2, l.z + lz2);
+}
+
 const obstacles: Obstacle[] = [
   { kind: 'gate', x0: -252, x1: -250, z0: -H, z1: H },
   { kind: 'gate', x0: 300, x1: 302, z0: -H, z1: H },
   { kind: 'gate', x0: 300, x1: 302, z0: MAGIC_C.z - H, z1: MAGIC_C.z + H },
-  { kind: 'gate', x0: 108, x1: 110, z0: MAGIC_C.z - H, z1: MAGIC_C.z + H }
+  { kind: 'gate', x0: 100 - H, x1: 100 + H, z0: -40, z1: -38 }
 ];
 
 export const MILL_TOWN: SceneLayout = {
@@ -468,7 +664,7 @@ export const MILL_TOWN: SceneLayout = {
   obstacles,
   markers,
   speedZones: [
-    { name: 'Magic Roundabout 20 zone', mph: 20, x0: 100, x1: 305, z0: -265, z1: -160 },
+    { name: 'Magic Roundabout 20 zone', mph: 20, x0: 140, x1: 305, z0: -265, z1: -160 },
     { name: 'Mill Town', mph: 30, x0: -300, x1: 320, z0: -300, z1: 220 }
   ],
   lanes: Object.values(ROADS),
@@ -477,9 +673,14 @@ export const MILL_TOWN: SceneLayout = {
   markings,
   signs,
   junctions,
-  bends: [grow2(bend(-150, 180), 14), grow2(bend(200, 180), 14), grow2(bend(0, -130), 14), ...[-1, 1].flatMap((sx) => [-1, 1].map((sz) => grow2(bend(MAGIC_C.x + sx * MAGIC_HALF, MAGIC_C.z + sz * MAGIC_HALF), 12)))],
+  bends: [grow2(bend(-150, 180), 14), grow2(bend(200, 180), 14), grow2(bend(0, -130), 14), grow2(bend(100, MAGIC_C.z), 14), ...[-1, 1].flatMap((sx) => [-1, 1].map((sz) => grow2(bend(MAGIC_C.x + sx * MAGIC_HALF, MAGIC_C.z + sz * MAGIC_HALF), 12)))],
   roundabouts: ALL_RBS,
-  aiPaths
+  aiPaths,
+  stopLines,
+  crossings,
+  signals,
+  boxes: [{ id: 'J1', x0: 100 - H, x1: 100 + H, z0: -130 - H, z1: -130 + H }],
+  busLanes: [{ ...BUS_LANE, heading: W, hours: 'At any time' }]
 };
 
 function grow2(r: Rect, by: number): Rect {

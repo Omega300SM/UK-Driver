@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { StreetControl } from '../../sim/street';
 import { CAR_PARK, type SceneLayout, type Rect } from './carParkLayout';
 import { instanced, lambert, baseBox, roofPrism, rng, type Placement } from '../props';
 import { speedRoundel, namePlate, fascia } from '../signs';
@@ -10,6 +11,8 @@ export interface BuiltScene {
   setMarker(id: string | null): void;
   setHintPath(points: Array<[number, number]> | null): void;
   update(t: number): void;
+  /** Signal lamps, beacons and pedestrians (scenes with crossings). */
+  updateStreet?(street: StreetControl | null, t: number): void;
 }
 
 const BRICKS = [0xa4513a, 0x9a4a33, 0xb5634a, 0x8e4433, 0xae5a3e, 0xc0846a];
