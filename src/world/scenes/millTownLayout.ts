@@ -545,6 +545,7 @@ signs.push(
 // ---- Markers ---------------------------------------------------------------------
 const markers: Marker[] = [
   { id: 'ST1', label: 'Station Road, on the left', x0: -H, x1: -H + 2.8, z0: -95, z1: -77 },
+  { id: 'ST2', label: 'Station Road, on the left', x0: H - 2.8, x1: H, z0: -95, z1: -77 },
   { id: 'MR1', label: 'Mill Road, on the left', x0: 70, x1: 95, z0: -H, z1: -H + 2.8 },
   { id: 'CS1', label: 'Canal Street, on the left', x0: -H, x1: -H + 2.8, z0: 80, z1: 98 },
   { id: 'SW1', label: 'Southway, on the left', x0: 200 + H - 2.8, x1: 200 + H, z0: -95, z1: -77 },

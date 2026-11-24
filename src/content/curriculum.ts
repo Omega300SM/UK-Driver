@@ -12,6 +12,7 @@ import { day10 } from './lessons/day10';
 import { day11 } from './lessons/day11';
 import { day12 } from './lessons/day12';
 import { day13 } from './lessons/day13';
+import { day14 } from './lessons/day14';
 
 export const WORLDS: WorldInfo[] = [
   { id: 1, name: 'Foundations', tagline: 'Controls, the left, signs and junctions', pin: { x: 112, y: 172 }, place: 'Little Ashby, Leicestershire' },
@@ -53,7 +54,7 @@ const titles: Array<[number, 1 | 2 | 3 | 4, string, boolean?]> = [
   [30, 4, 'Graduation']
 ];
 
-const LESSONS: Record<number, LessonContent> = { 1: day01, 2: day02, 3: day03, 4: day04, 5: day05, 6: day06, 7: day07, 8: day08, 9: day09, 10: day10, 11: day11, 12: day12, 13: day13 };
+const LESSONS: Record<number, LessonContent> = { 1: day01, 2: day02, 3: day03, 4: day04, 5: day05, 6: day06, 7: day07, 8: day08, 9: day09, 10: day10, 11: day11, 12: day12, 13: day13, 14: day14 };
 
 export const CURRICULUM: CurriculumDay[] = titles.map(([day, world, title, boss]) => ({
   day,

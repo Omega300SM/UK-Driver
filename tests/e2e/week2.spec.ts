@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { ROUTES2 } from './routes2';
 
 test.skip(({ viewport }) => (viewport?.width ?? 0) < (viewport?.height ?? 0), 'Driving is landscape-only');
-test.setTimeout(300_000);
+test.setTimeout(560_000);
 
 async function ready(page: Page) {
   await page.goto('/?e2e=1');
@@ -41,7 +41,8 @@ for (const day of Object.keys(ROUTES2).map(Number)) {
       d.run(st);
     }, ROUTES2[day] as unknown[]);
     const t0 = Date.now();
-    while (Date.now() - t0 < 280_000) {
+    let finished = false;
+    while (Date.now() - t0 < 540_000) {
       const st = await page.evaluate(() => ({
         over: !!document.querySelector('[data-testid=test-over]'),
         x: (window as any).__drive?.car.x,
@@ -49,13 +50,17 @@ for (const day of Object.keys(ROUTES2).map(Number)) {
         f: (window as any).__drive?.rules.faults.map((f: { code: string; t: number }) => `${f.code}@${Math.round(f.t)}`)
       }));
       if ((globalThis as any).process?.env?.ROUTE_DEBUG) console.log(JSON.stringify(st));
-      if (st.over) break;
+      if (st.over) {
+        finished = true;
+        break;
+      }
       await page.waitForTimeout(2000);
     }
     const res = await page.evaluate(() => ({
       faults: (window as any).__DE.session.testFaults.map((f: { code: string }) => f.code),
       early: (window as any).__DE.session.testEndedEarly
     }));
+    expect(finished, 'the scripted drive reached the end of the test').toBe(true);
     expect(res).toEqual({ faults: [], early: false });
     expect(errors).toEqual([]);
   });

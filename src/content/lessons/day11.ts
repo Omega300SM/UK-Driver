@@ -89,7 +89,7 @@ export const day11: LessonContent = {
       { say: 'Good. A zebra crossing next: look for anyone waiting.', await: 'line.Z1-w' },
       { say: 'Follow the road round to the right, onto Station Road.', await: 'zone.p1-approach-n' },
       { say: 'Pelican crossing: watch the lights.', await: 'line.P1-n' },
-      { say: 'Pull up on the left at the marker. Mirror, signal.', await: 'stoppedAt.ST1', highlight: 'brake' },
+      { say: 'Pull up on the left at the marker. Mirror, signal.', await: 'stoppedAt.ST2', highlight: 'brake' },
       { say: 'Handbrake on.', await: 'handbrake.on', highlight: 'handbrake' }
     ],
     outro: 'Lights, a box junction and a bus lane, all by the book. Mill Town is getting used to you.'

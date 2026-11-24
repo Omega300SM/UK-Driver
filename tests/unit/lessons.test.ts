@@ -28,6 +28,26 @@ describe('lesson content', () => {
         }
       }
       const ids = new Set(L.markers.map((m) => m.id));
+      // Each drive's route line reaches the marker where it finishes, on the correct side of the road.
+      const reaches = (hint: Array<[number, number]> | undefined, id: string, what: string) => {
+        const mk = L.markers.find((m) => m.id === id);
+        if (!hint?.length || !mk) return;
+        let best = Infinity;
+        for (let i = 1; i < hint.length; i++) {
+          const [ax, az] = hint[i - 1];
+          const [bx, bz] = hint[i];
+          const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 0.5));
+          for (let k = 0; k <= n; k++) {
+            const x = ax + ((bx - ax) * k) / n;
+            const z = az + ((bz - az) * k) / n;
+            best = Math.min(best, Math.hypot(Math.max(mk.x0 - x, 0, x - mk.x1), Math.max(mk.z0 - z, 0, z - mk.z1)));
+          }
+        }
+        expect(best, `${what} route line doesn't reach marker ${id}`).toBeLessThan(1.5);
+      };
+      if (!lesson.test.manoeuvre) reaches(lesson.test.hint, lesson.test.finishMarker, 'test');
+      const lastStop = [...(lesson.guided?.steps ?? [])].reverse().find((st) => /^stoppedAt\./.test(st.await));
+      if (lastStop) reaches(lesson.guided?.hint, lastStop.await.split('.')[1], 'guided');
       expect(ids.has(lesson.test.finishMarker), 'finish marker').toBe(true);
       for (const s of lesson.guided?.steps ?? []) {
         const m = /^(zone|stoppedAt|marker|parkedIn)\.(.+)$/.exec(s.await);

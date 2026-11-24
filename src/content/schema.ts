@@ -52,6 +52,7 @@ export type DiagramId =
   | 'hierarchy'
   | 'passing-distances'
   | 'h2-junction'
+  | 'rush-hour'
   | 'none';
 
 /** A road sign drawn from the procedural sign set. */

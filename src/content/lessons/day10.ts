@@ -84,7 +84,7 @@ export const day10: LessonContent = {
       { say: 'If someone is waiting or on the crossing, stop at the line and let them cross. Be patient.', await: 'line.Z1-w', nudge: 'Go when the crossing is clear.' },
       { say: 'Well done. Follow the road round to the right, onto Station Road.', await: 'zone.p1-approach-n' },
       { say: 'A pelican crossing. Red means stop. Flashing amber means give way to anyone still on it.', await: 'line.P1-n', nudge: 'Wait for the lights, and for anyone still crossing.' },
-      { say: 'Lovely. Pull up on the left at the marker, past the zig-zags. Mirror, signal.', await: 'stoppedAt.ST1', highlight: 'brake' },
+      { say: 'Lovely. Pull up on the left at the marker, past the zig-zags. Mirror, signal.', await: 'stoppedAt.ST2', highlight: 'brake' },
       { say: 'Handbrake on.', await: 'handbrake.on', highlight: 'handbrake' }
     ],
     outro: 'A zebra, a pelican and a set of lights, and nobody was hurried. That’s how you share a town.'

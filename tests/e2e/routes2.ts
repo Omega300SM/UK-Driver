@@ -2,7 +2,7 @@
  * Scripted careful drives of the Week 2 (Mill Town) test routes. Like
  * routes.ts, but roundabout arcs come from the same helpers the lessons use.
  */
-import { R1, M1, MAGIC, rbArc } from '../../src/world/scenes/millTownLayout';
+import { R1, R2, M1, MAGIC, rbArc } from '../../src/world/scenes/millTownLayout';
 
 const [MN, ME, MW] = MAGIC;
 
@@ -25,8 +25,9 @@ const pullIn = (pts: Pt[]): Step[] => [{ act: 'mirror', arg: 'interior' }, { act
  * a gap, look again, go. Signal left at `signalLeftAt` (fraction of the arc)
  * when leaving by an exit after the first.
  */
-function roundabout(rb: typeof R1, from: string, to: string, opts: { signalLeftAt?: number; speed?: number } = {}): Step[] {
+function roundabout(rb: typeof R1, from: string, to: string, opts: { signalLeftAt?: number; speed?: number; startAt?: [number, number] } = {}): Step[] {
   const arc = rbArc(rb, from, to);
+  if (opts.startAt) arc[0] = opts.startAt;
   const [sx, sz] = arc[0];
   // Stop with the front of the car just short of the give way line.
   const [nx, nz] = arc[1];
@@ -42,11 +43,10 @@ function roundabout(rb: typeof R1, from: string, to: string, opts: { signalLeftA
     const k = Math.max(1, Math.round(body.length * opts.signalLeftAt));
     steps.push({ drive: body.slice(0, k) }, { act: 'mirror', arg: 'left' }, { act: 'signal', arg: 'left' }, { drive: body.slice(k) });
   } else steps.push({ drive: body });
-  // Clear the roundabout, then cancel the signal (gentle exits don't self-cancel).
-  const [ax, az] = arc[arc.length - 2];
+  // Clear the roundabout straight along the exit road, then cancel the signal (gentle exits don't self-cancel).
   const [bx, bz] = arc[arc.length - 1];
-  const el = Math.hypot(bx - ax, bz - az);
-  steps.push({ drive: [[bx + ((bx - ax) / el) * 7, bz + ((bz - az) / el) * 7, v + 1]] }, { act: 'signal', arg: 'off' });
+  const out = rb.arms.find((a) => a.id === to)!.angle;
+  steps.push({ drive: [[bx + Math.sin(out) * 7, bz + Math.cos(out) * 7, v + 1]] }, { act: 'signal', arg: 'off' });
   return steps;
 }
 
@@ -206,6 +206,62 @@ export const ROUTES2: Record<number, Step[]> = {
     { act: 'mirror', arg: 'interior' },
     { drive: [[-149.2, 72, 8], [-148.1, 80, 7], [-148.1, 140, 7.5], [-148.1, 168, 6], [-147.6, 174.6, 4], [-145, 177.6, 4], [-136, 178.1, 6]] },
     ...pullIn([[-122, 178, 5], [-112, 177.45, 3], [-108, 177.35, 0]]),
+    ...secure
+  ]
+  ,
+  // Day 14 BOSS (busy traffic): Ringway past the cyclist and school, M1 first exit, R1 right, R2 left lane first exit,
+  // left onto Canal Side past the bus lane, the lights, the zebra and the pelican, then pull up on Station Road.
+  14: [
+    { moveOff: 'right' },
+    { drive: [[-110, 1.9, 6]] },
+    { act: 'signal', arg: 'off' },
+    { drive: [[-132, 1.9, 8]] },
+    { act: 'mirror', arg: 'interior' },
+    { act: 'mirror', arg: 'left' },
+    { act: 'signal', arg: 'left' },
+    { drive: [[-142, 1.9, 5], [-146.4, 2.7, 3.5], [-148.1, 6, 3.5], [-148.1, 8.2, 3]] },
+    { act: 'signal', arg: 'off' },
+    { drive: [[-148.1, 18, 5]] },
+    { act: 'mirror', arg: 'interior' },
+    { act: 'mirror', arg: 'right' },
+    { act: 'signal', arg: 'right' },
+    { drive: [[-150.6, 30, 8.6], [-150.6, 64, 8.6]] },
+    { act: 'signal', arg: 'off' },
+    { act: 'mirror', arg: 'interior' },
+    { drive: [[-149.2, 72, 8], [-148.1, 80, 7], [-148.1, 140, 7.5], [-148.1, 168, 6], [-147.6, 174.6, 4], [-145, 177.6, 4], [-136, 178.1, 6], [-40, 178.1, 8.5]] },
+    // M1: first exit (left).
+    { act: 'mirror', arg: 'interior' },
+    { act: 'mirror', arg: 'left' },
+    { act: 'signal', arg: 'left' },
+    ...roundabout(M1, 'W', 'S'),
+    { drive: [[-1.9, 150, 6], [-1.9, 60, 8.5]] },
+    // R1: third exit (right).
+    { act: 'mirror', arg: 'interior' },
+    { act: 'mirror', arg: 'right' },
+    { act: 'signal', arg: 'right' },
+    ...roundabout(R1, 'N', 'E', { signalLeftAt: 0.78 }),
+    { drive: [[60, -1.9, 8.5], [128, -1.9, 8.5]] },
+    // R2: left-hand lane, first exit.
+    { act: 'mirror', arg: 'interior' },
+    { act: 'mirror', arg: 'left' },
+    { act: 'signal', arg: 'left' },
+    { drive: [[141, -1.9, 7], [146, -3.3, 6], [152, -5.7, 6]] },
+    ...roundabout(R2, 'W', 'S', { startAt: [rbArc(R2, 'W', 'S')[0][0], -5.7] }),
+    { drive: [[198.1, -60, 8], [198.1, -100, 8]] },
+    // Left onto Canal Side: keep out of the bus lane.
+    { act: 'mirror', arg: 'interior' },
+    { act: 'mirror', arg: 'left' },
+    { act: 'signal', arg: 'left' },
+    { drive: [[198.1, -114, 5], [198.1, -120, 4], [197.4, -124.5, 3.5], [194, -127.6, 3.5], [188, -128.1, 5]] },
+    { act: 'signal', arg: 'off' },
+    { drive: [[170, -128.1, 8], [125, -128.1, 8]] },
+    { act: 'mirror', arg: 'interior' },
+    { drive: [[106, -128.1, 6], [94, -128.1, 6.5], [60, -128.1, 8]] },
+    { act: 'mirror', arg: 'interior' },
+    { drive: [[20, -128.1, 7], [8, -128.1, 5], [3.4, -127.5, 4], [1.9, -124, 4], [1.9, -116, 5]] },
+    { act: 'mirror', arg: 'interior' },
+    { drive: [[1.9, -100, 6]] },
+    ...pullIn([[2.4, -92, 4], [2.65, -86, 0]]),
     ...secure
   ]
 };
