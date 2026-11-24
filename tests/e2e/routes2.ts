@@ -1,0 +1,87 @@
+/**
+ * Scripted careful drives of the Week 2 (Mill Town) test routes. Like
+ * routes.ts, but roundabout arcs come from the same helpers the lessons use.
+ */
+import { R1, M1, rbArc } from '../../src/world/scenes/millTownLayout';
+
+type Pt = [number, number, number];
+type Step =
+  | { act: 'belt' | 'handbrake' | 'mirror' | 'look' | 'signal' | 'gear'; arg?: string }
+  | { brake: boolean }
+  | { wait: number }
+  | { drive: Pt[] }
+  | { waitGap: Array<[number, number]>; secs?: number }
+  | { waitFinishAsked: true }
+  | { moveOff: 'left' | 'right' };
+
+const secure: Step[] = [{ waitFinishAsked: true }, { brake: true }, { act: 'handbrake' }, { act: 'gear', arg: 'P' }, { act: 'signal', arg: 'off' }];
+const pullIn = (pts: Pt[]): Step[] => [{ act: 'mirror', arg: 'interior' }, { act: 'mirror', arg: 'left' }, { act: 'signal', arg: 'left' }, { drive: pts }];
+
+/**
+ * Drive across a roundabout: stop at the give way line, look right, wait for
+ * a gap, look again, go. Signal left at `signalLeftAt` (fraction of the arc)
+ * when leaving by an exit after the first.
+ */
+function roundabout(rb: typeof R1, from: string, to: string, opts: { signalLeftAt?: number; speed?: number } = {}): Step[] {
+  const arc = rbArc(rb, from, to);
+  const [sx, sz] = arc[0];
+  // Stop with the front of the car just short of the give way line.
+  const [nx, nz] = arc[1];
+  const len = Math.hypot(nx - sx, nz - sz);
+  const ux = (nx - sx) / len;
+  const uz = (nz - sz) / len;
+  const stop: Pt = [sx - ux * 0.6, sz - uz * 0.6, 0];
+  const v = opts.speed ?? (rb.mini ? 3.5 : 5);
+  const body = arc.slice(1).map(([x, z]) => [x, z, v] as Pt);
+  const merge: Array<[number, number]> = arc.slice(1, 4).map(([x, z]) => [x, z]);
+  const steps: Step[] = [{ drive: [[sx - ux * 8, sz - uz * 8, 4], stop] }, { act: 'look', arg: 'right' }, { waitGap: merge, secs: 4 }, { act: 'look', arg: 'right' }];
+  if (opts.signalLeftAt !== undefined) {
+    const k = Math.max(1, Math.round(body.length * opts.signalLeftAt));
+    steps.push({ drive: body.slice(0, k) }, { act: 'mirror', arg: 'left' }, { act: 'signal', arg: 'left' }, { drive: body.slice(k) });
+  } else steps.push({ drive: body });
+  // Clear the roundabout, then cancel the signal (gentle exits don't self-cancel).
+  const [ax, az] = arc[arc.length - 2];
+  const [bx, bz] = arc[arc.length - 1];
+  const el = Math.hypot(bx - ax, bz - az);
+  steps.push({ drive: [[bx + ((bx - ax) / el) * 7, bz + ((bz - az) / el) * 7, v + 1]] }, { act: 'signal', arg: 'off' });
+  return steps;
+}
+
+export const ROUTES2: Record<number, Step[]> = {
+  8: [
+    { moveOff: 'right' },
+    { drive: [[-110, -1.9, 6]] },
+    { act: 'signal', arg: 'off' },
+    { drive: [[-45, -1.9, 8.5]] },
+    // R1 from the west, third exit (Canal Street): signal right, then left to leave.
+    { act: 'mirror', arg: 'interior' },
+    { act: 'mirror', arg: 'right' },
+    { act: 'signal', arg: 'right' },
+    ...roundabout(R1, 'W', 'N', { signalLeftAt: 0.72 }),
+    { drive: [[1.9, 40, 6], [1.9, 140, 8]] },
+    // Mini-roundabout, second exit (right): signal right.
+    { act: 'mirror', arg: 'interior' },
+    { act: 'mirror', arg: 'right' },
+    { act: 'signal', arg: 'right' },
+    ...roundabout(M1, 'S', 'W'),
+    { act: 'signal', arg: 'off' },
+    { drive: [[-20, 181.9, 6], [-138, 181.9, 8], [-146, 181.2, 4], [-151.6, 176, 4], [-151.9, 168, 6], [-151.9, 30, 8]] },
+    // Give way junction onto Mill Road, turning right.
+    { act: 'mirror', arg: 'interior' },
+    { act: 'mirror', arg: 'right' },
+    { act: 'signal', arg: 'right' },
+    { drive: [[-151.9, 14, 4], [-151.9, 7, 0]] },
+    { act: 'look', arg: 'right' },
+    { act: 'look', arg: 'left' },
+    { waitGap: [[-150, -1.9], [-150, 1.9]], secs: 7 },
+    { act: 'look', arg: 'right' },
+    { act: 'look', arg: 'left' },
+    { drive: [[-151.2, 2.5, 3], [-148.6, -0.6, 3.5], [-144, -1.9, 5], [-110, -1.9, 7], [-45, -1.9, 8.5]] },
+    // R1 again, straight on (second exit): no approach signal, left after the first exit.
+    ...roundabout(R1, 'W', 'E', { signalLeftAt: 0.5 }),
+    { drive: [[30, -1.9, 7], [62, -1.9, 7]] },
+    { act: 'signal', arg: 'off' },
+    ...pullIn([[76, -2.4, 4], [82, -2.65, 0]]),
+    ...secure
+  ]
+};

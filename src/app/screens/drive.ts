@@ -6,7 +6,7 @@ import { goHome, next } from '../nav';
 import { stageLabel, toast } from './common';
 import { Renderer } from '../../engine/renderer';
 import { buildScene } from '../../world/scenes';
-import { inRect, speedLimitAt, wrongSideBy as wrongSideAt, laneAt, junctionBoxAt, grow, type Rect } from '../../world/layout';
+import { inRect, speedLimitAt, wrongSideBy as wrongSideAt, laneAt, junctionBoxAt, grow } from '../../world/layout';
 import { buildPlayerCar, setLamp } from '../../world/playerCar';
 import { speedRoundelSvg } from '../../world/signs';
 import { signSvg } from '../../world/signSvg';
@@ -15,6 +15,8 @@ import { Autopilot, type Waypoint } from '../../sim/autopilot';
 import { RulesEngine } from '../../rules/RulesEngine';
 import { day1Checks, angleDiff } from '../../rules/checks';
 import { townChecks } from '../../rules/checks/town';
+import { millTownChecks } from '../../rules/checks/roundabout';
+import { RoadAnalyser } from '../../sim/analysis';
 import { Traffic } from '../../sim/traffic';
 import { instanced, baseBox, lambert } from '../../world/props';
 import { Recorder } from '../../rules/recorder';
@@ -43,7 +45,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
   const lesson = s.lesson;
   const settings = app.save.settings;
   const setup: DriveSetup = (mode === 'guided' ? lesson.guided : mode === 'free' ? lesson.free : lesson.test) ?? {};
-  const town = lesson.checks === 'town';
+  const town = lesson.checks !== 'carPark';
 
   // ---------- DOM ----------
   const canvas = h('canvas', { class: 'gl', 'aria-label': 'Road view. Swipe left or right to look over your shoulder.' }) as HTMLCanvasElement;
@@ -178,7 +180,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
   car.reset(start.x, start.z, start.heading);
   car.gear = 'P';
   car.handbrake = true;
-  const rules = new RulesEngine(town ? townChecks() : day1Checks(), mode === 'test' ? 'test' : 'coach');
+  const rules = new RulesEngine(lesson.checks === 'millTown' ? millTownChecks() : town ? townChecks() : day1Checks(), mode === 'test' ? 'test' : 'coach');
   const recorder = new Recorder();
   const traffic = new Traffic(L, setup.traffic ?? 'none', setup.scripted ?? []);
   let t = 0;
@@ -384,6 +386,10 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
         return `shoulder.${ev.side}`;
       case 'turn':
         return `turned.${ev.dir}`;
+      case 'rbExit':
+        return `rbExit.${ev.rb}`;
+      case 'rbEnter':
+        return `rbEnter.${ev.rb}`;
       default:
         return ev.type;
     }
@@ -424,6 +430,8 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
       case 'mirror':
       case 'shoulder':
       case 'turned':
+      case 'rbEnter':
+      case 'rbExit':
         return stepEvents.has(trig);
       case 'look':
         return stepEvents.has(`shoulder.${arg}`);
@@ -587,11 +595,14 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
       }
     }
 
-    // Self-cancelling indicator after a turn (like a real stalk).
+    // Self-cancelling indicator, like a real stalk: once the wheel has turned
+    // a fair way in the signalled direction (and the car has actually turned),
+    // it cancels as the wheel comes back to the centre.
     if (signal !== 'off') {
-      const d = Math.abs(angleDiff(car.heading, signalHeading));
-      if (d > 1.0) signalTurned = true;
-      if (signalTurned && Math.abs(car.steerAngle) < 0.05 && d > 1.0) {
+      const towards = signal === 'left' ? -car.steerAngle : car.steerAngle; // steerAngle > 0 is right
+      const turnedBy = Math.abs(angleDiff(car.heading, signalHeading));
+      if (towards > 0.14 && turnedBy > 0.35) signalTurned = true;
+      if (signalTurned && Math.abs(car.steerAngle) < 0.03) {
         signal = 'off';
         emit({ type: 'signal', t, state: 'off' });
         refreshHud();
@@ -599,7 +610,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     }
 
     const limit = speedLimitAt(L, car.x, car.z);
-    const sit = town ? situation(limit) : null;
+    const sit = town ? analyser.situation(t, limit, { pullingUp: mode === 'test' && (finishShown || awaitStop !== null), movedOffAt }) : null;
     const wrongSideBy = sit?.passingObstruction ? null : wrongSideAt(L, car.x, car.z, car.heading);
     emit({
       type: 'tick',
@@ -616,9 +627,10 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
       ...(sit ?? {})
     });
     if (town && !ended) {
-      junctionLines();
-      conflicts();
-      detectTurn();
+      analyser.junctionLines(t, emit);
+      analyser.conflicts(t, emit);
+      analyser.roundabouts(t, signal, emit);
+      analyser.detectTurn(t, emit);
     }
     recorder.push({ t, x: car.x, z: car.z, heading: car.heading, speed: car.speed, steer, signal, brake: brakeValue });
 
@@ -650,160 +662,13 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     engineUpdate(Math.min(1, Math.abs(car.speed) / 14 + throttle * 0.35), throttle);
   };
 
-  // ---------- Town situation analysis (fed to the rules each tick) ----------
+  // ---------- Road analysis (town scenes): see src/sim/analysis.ts ----------
+  const analyser = new RoadAnalyser(L, car, traffic, recorder);
   let movedOffAt = -Infinity;
   // Whether the next move-off is from a parked position (kerb or handbrake) or pulling away in traffic.
   let handbrakeSinceStop = true;
   let kerbGapAtStop = 0;
-  const situation = (limit: number) => {
-    const [fx, fz] = car.forward;
-    const [rx, rz] = car.right;
-    let passingObstruction = false;
-    let clearance: number | null = null;
-    for (const o of L.obstacles) {
-      if (o.kind !== 'car' && o.kind !== 'van') continue;
-      const ox = (o.x0 + o.x1) / 2;
-      const oz = (o.z0 + o.z1) / 2;
-      const dx = ox - car.x;
-      const dz = oz - car.z;
-      const along = dx * fx + dz * fz;
-      const across = dx * rx + dz * rz; // negative = on our left
-      const halfLen = Math.max(o.x1 - o.x0, o.z1 - o.z0) / 2;
-      const halfWid = Math.min(o.x1 - o.x0, o.z1 - o.z0) / 2;
-      if (across < 0 && across > -4.6 && along > -halfLen - 2 && along < halfLen + 9) {
-        passingObstruction = true;
-        if (Math.abs(along) < halfLen + 2) {
-          const gap = -across - halfWid - car.width / 2;
-          clearance = clearance === null ? gap : Math.min(clearance, gap);
-        }
-      }
-    }
-    const oncomingM = passingObstruction ? traffic.oncoming(car.x, car.z, car.heading) : null;
-    const inDoubleWhite = (L.doubleWhite ?? []).some((r) => inRect(r, car.x, car.z));
-    const inNoEntry = (L.noEntry ?? []).some((r) => inRect(r, car.x, car.z) && Math.cos(car.heading - r.into) > 0.5);
-    // "Unduly slow": well under the limit, on a clear road, not near junctions, not pulling up.
-    const v = mph(car.speed);
-    // Clear road: no car ahead of us, going our way, within 45 m.
-    let clearAhead = !traffic.cars.some((c) => {
-      const dx = c.x - car.x;
-      const dz = c.z - car.z;
-      const along = dx * fx + dz * fz;
-      const across = Math.abs(dx * rx + dz * rz);
-      return along > 0 && along < 45 && across < 2.5 && Math.cos(c.heading - car.heading) > 0.5;
-    });
-    const nearJunction = (L.junctions ?? []).some((j) => inRect(grow(j.box, 35), car.x, car.z));
-    const pullingUp = mode === 'test' && (finishShown || awaitStop !== null);
-    // Parked cars nearby are a good reason to go slowly (rule 152).
-    const nearParked = L.obstacles.some((o) => (o.kind === 'car' || o.kind === 'van') && Math.hypot((o.x0 + o.x1) / 2 - car.x, (o.z0 + o.z1) / 2 - car.z) < 30);
-    if (passingObstruction || nearParked) clearAhead = false;
-    const undulySlow = v > 1 && v < limit * 0.4 && clearAhead && !nearJunction && !pullingUp && t - movedOffAt > 12;
-    return { passingObstruction, clearance, oncomingM, inDoubleWhite, inNoEntry, undulySlow };
-  };
-
-  // Crossing a give way / stop line.
-  const lineState = new Map<string, { before: boolean; minSpeed: number }>();
-  const junctionLines = () => {
-    const [fx, fz] = car.forward;
-    const front = { x: car.x + fx * 2.05, z: car.z + fz * 2.05 };
-    for (const j of L.junctions ?? []) {
-      const ax = Math.sin(j.approach);
-      const az = Math.cos(j.approach);
-      const cx = (j.line.x0 + j.line.x1) / 2;
-      const cz = (j.line.z0 + j.line.z1) / 2;
-      const sAlong = (front.x - cx) * ax + (front.z - cz) * az;
-      const lateral = Math.abs((front.x - cx) * az - (front.z - cz) * ax);
-      const halfW = Math.max(j.line.x1 - j.line.x0, j.line.z1 - j.line.z0) / 2;
-      const st = lineState.get(j.id) ?? { before: false, minSpeed: Infinity };
-      const aligned = Math.cos(car.heading - j.approach) > 0.5;
-      if (lateral < halfW + 1.2 && aligned && sAlong < 0 && sAlong > -8) {
-        st.before = true;
-        st.minSpeed = Math.min(st.minSpeed, Math.abs(car.speed));
-      } else if (st.before && sAlong >= 0 && lateral < halfW + 2) {
-        emit({ type: 'emerge', t, junction: j.id, kind: j.kind, minSpeed: st.minSpeed });
-        st.before = false;
-        st.minSpeed = Infinity;
-      } else if (sAlong < -8 || lateral > halfW + 4) {
-        st.before = false;
-        st.minSpeed = Infinity;
-      }
-      lineState.set(j.id, st);
-    }
-  };
-
-  // Being in another car's path inside a junction box.
-  const conflicts = () => {
-    const [fx, fz] = car.forward;
-    for (const p of [
-      { x: car.x, z: car.z },
-      { x: car.x + fx * 2, z: car.z + fz * 2 }
-    ]) {
-      const j = junctionBoxAt(L, p.x, p.z);
-      if (!j) continue;
-      for (const c of traffic.cars) {
-        // Only cars whose path we're crossing or entering (not ones following us).
-        if (Math.abs(Math.cos(c.heading - car.heading)) > 0.75 && Math.cos(c.heading - car.heading) > 0) continue;
-        const cfx = Math.sin(c.heading);
-        const cfz = Math.cos(c.heading);
-        const dx = p.x - c.x;
-        const dz = p.z - c.z;
-        const along = dx * cfx + dz * cfz;
-        const across = Math.abs(dx * cfz - dz * cfx);
-        if (along > 0 && along < 60 && across < 1.7) {
-          const ttc = Math.max(0, along - 2.1 - 2.1) / Math.max(c.cruise, 0.5);
-          emit({ type: 'conflict', t, ttc, junction: j.id });
-        }
-      }
-    }
-  };
-
-  // Completed turns (for signal and mirror checks).
-  let lastTurnT = -Infinity;
-  let lastTurnCheck = 0;
-  const detectTurn = () => {
-    if (t - lastTurnCheck < 0.2) return;
-    lastTurnCheck = t;
-    if (Math.abs(car.speed) < 0.5) return;
-    const frames = recorder.frames.filter((f) => f.t >= Math.max(t - 9, lastTurnT));
-    if (frames.length < 5) return;
-    const h0 = frames[0].heading;
-    const dh = angleDiff(car.heading, h0);
-    if (Math.abs(dh) < 1.2) return;
-    // Find where this turn actually began: go back to ~60° before the end of
-    // the turn, then keep going back while the heading was still changing.
-    let i = frames.length - 1;
-    while (i > 0 && Math.abs(angleDiff(frames[i].heading, car.heading)) < 1.05) i--;
-    while (i > 0 && Math.abs(angleDiff(frames[i].heading, frames[i - 1].heading)) > 0.02) i--;
-    const startF = frames[i];
-    lastTurnT = t;
-    if ((L.bends ?? []).some((b) => inRect(b, startF.x, startF.z))) return; // the road bends; no signal needed
-    const turnDh = angleDiff(car.heading, startF.heading);
-    emit({ type: 'turn', t, dir: turnDh > 0 ? 'left' : 'right', startT: startF.t, signalAtStart: startF.signal });
-  };
-
-  /** Facts about where the car is pulled up (for "pull up on the left" tasks). */
-  const pullUpInfo = () => {
-    const onYellow = (L.yellow ?? []).find((y) => inRect(y, car.x, car.z))?.kind ?? null;
-    const near: Rect[] = [...(L.junctions ?? []).map((j) => j.box), ...(L.noEntry ?? [])];
-    let nearJunctionM: number | null = null;
-    for (const r of near) {
-      const dx = Math.max(r.x0 - car.x, 0, car.x - r.x1);
-      const dz = Math.max(r.z0 - car.z, 0, car.z - r.z1);
-      const d = Math.hypot(dx, dz) - 2.05;
-      nearJunctionM = nearJunctionM === null ? d : Math.min(nearJunctionM, d);
-    }
-    const onDoubleWhite = (L.doubleWhite ?? []).some((r) => inRect(r, car.x, car.z));
-    let kerbGap = 0;
-    const lane = laneAt(L, car.x, car.z);
-    if (lane) {
-      const half = lane.axis === 'x' ? (lane.z1 - lane.z0) / 2 : (lane.x1 - lane.x0) / 2;
-      const fx = Math.sin(car.heading);
-      const fz = Math.cos(car.heading);
-      const w = car.width / 2;
-      if (lane.axis === 'x') kerbGap = fx > 0 ? car.z - w - (lane.centre - half) : lane.centre + half - (car.z + w);
-      else kerbGap = fz > 0 ? lane.centre + half - (car.x + w) : car.x - w - (lane.centre - half);
-    }
-    return { onYellow, nearJunctionM, onDoubleWhite, kerbGap };
-  };
+  const pullUpInfo = () => analyser.pullUpInfo();
 
   const finishEvent = (): DriveEvent => ({ type: 'finish', t, handbrake: car.handbrake, gear: car.gear, pullUp: lesson.test.pullUp ? pullUpInfo() : undefined });
 

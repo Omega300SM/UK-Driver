@@ -35,6 +35,10 @@ export type DiagramId =
   | 'emerging'
   | 'turn-right'
   | 'boss'
+  | 'roundabout-giveway'
+  | 'roundabout-signals'
+  | 'roundabout-lanes'
+  | 'magic'
   | 'none';
 
 /** A road sign drawn from the procedural sign set. */
@@ -81,6 +85,8 @@ export type Trigger =
   | 'turned.right'
   | `speedAbove.${number}`
   | `zone.${string}`
+  | `rbEnter.${string}`
+  | `rbExit.${string}`
   | `marker.${string}`
   | `stoppedAt.${string}`;
 
@@ -145,9 +151,9 @@ export interface LessonContent {
   world: WorldId;
   title: string;
   subtitle: string;
-  sceneId: 'carPark' | 'town';
+  sceneId: 'carPark' | 'town' | 'millTown';
   /** Which rule set marks the drives. */
-  checks: 'carPark' | 'town';
+  checks: 'carPark' | 'town' | 'millTown';
   boss?: boolean;
   briefing: BriefingSlide[];
   drill?: { intro: string; items: DrillItem[]; outro: string };

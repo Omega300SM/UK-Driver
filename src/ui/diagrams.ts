@@ -36,6 +36,14 @@ export function diagram(id: DiagramId): string {
       return turnRight();
     case 'boss':
       return bossMap();
+    case 'roundabout-giveway':
+      return rbGiveway();
+    case 'roundabout-signals':
+      return rbSignals();
+    case 'roundabout-lanes':
+      return rbLanes();
+    case 'magic':
+      return magicDiagram();
     default:
       return `<div style="display:grid;place-items:center;gap:8px">${maggieSvg('proud', 150)}<b>Maggie Hale</b><small class="muted">Ex-DVSA examiner · 31 years</small></div>`;
   }
@@ -238,4 +246,65 @@ function bossMap(): string {
     <path d="M232 140 L232 46 L124 46 L124 146 L226 146 L226 60" stroke="#ffd23f" stroke-width="3" fill="none" stroke-dasharray="6 4"/>
     <text x="240" y="100" ${F} font-size="11">Mill Lane</text><text x="60" y="100" ${F} font-size="11">Tannery Rd</text><text x="150" y="30" ${F} font-size="11">Market St · Ashby Rd</text><text x="150" y="165" ${F} font-size="11">Back Lane</text>
     <circle cx="232" cy="140" r="6" fill="#2f8a5f"/><text x="242" y="144" ${F} font-size="11">Start</text></svg>`;
+}
+
+// ---- Week 2: roundabouts --------------------------------------------------
+/** Roundabout seen from above with you approaching from the bottom (clockwise flow, island on your right). */
+function rbBase(extra: string, label: string): string {
+  return `<svg viewBox="0 0 340 200" role="img" aria-label="${label}"><rect width="340" height="200" rx="12" fill="#78a656"/>
+    <rect x="148" y="0" width="44" height="200" fill="#50545a"/><rect x="0" y="78" width="340" height="44" fill="#50545a"/>
+    <circle cx="170" cy="100" r="54" fill="#50545a"/><circle cx="170" cy="100" r="26" fill="#7fb35a" stroke="#d8d4c8" stroke-width="4"/>
+    <path d="M 170 52 A 48 48 0 0 1 218 100" stroke="#ffffff" stroke-width="2.5" fill="none" stroke-dasharray="5 4" opacity="0.7"/>
+    ${extra}</svg>`;
+}
+function rbGiveway(): string {
+  return rbBase(
+    `${car(181, 178, '#2f8a5f', -90)}${car(214, 128, '#b8352f', 180 + 45)}
+    <path d="M150 156 L190 156" stroke="#fff" stroke-width="3" stroke-dasharray="4 3"/>
+    <path d="M196 150 Q205 132 214 128" stroke="#ffd23f" stroke-width="3" fill="none" stroke-dasharray="5 4"/>
+    <text x="226" y="160" ${F} font-size="13" fill="#fff">Give way to</text><text x="226" y="176" ${F} font-size="13" fill="#fff">the right</text>
+    <text x="12" y="22" ${F} font-size="13" fill="#fff">Clockwise: island on your right</text>`,
+    'Approaching a roundabout from the bottom: give way to traffic coming from your right'
+  );
+}
+function rbSignals(): string {
+  return `<svg viewBox="0 0 340 170" role="img" aria-label="Roundabout signals: first exit left, straight on no signal then left, right exit signal right then left"><rect width="340" height="170" rx="12" fill="#1f6f4a"/>
+    ${[
+      ['First exit', 'Left on approach,', 'keep it on', 60, -90],
+      ['Ahead', 'No signal, then left', 'after the exit before', 170, 0],
+      ['Right', 'Right on approach,', 'then left to leave', 280, 90]
+    ]
+      .map(
+        ([title, a, b, x, rel]) => `<g transform="translate(${x},60)">
+        <circle r="22" fill="none" stroke="#fff" stroke-width="7"/><circle r="9" fill="#7fb35a"/>
+        <line x1="0" y1="56" x2="0" y2="22" stroke="#fff" stroke-width="7"/>
+        <line x1="${Math.round(Math.sin(((rel as number) * Math.PI) / 180) * 22)}" y1="${Math.round(-Math.cos(((rel as number) * Math.PI) / 180) * 22)}" x2="${Math.round(Math.sin(((rel as number) * Math.PI) / 180) * 44)}" y2="${Math.round(-Math.cos(((rel as number) * Math.PI) / 180) * 44)}" stroke="#ffd23f" stroke-width="7"/>
+        <text y="80" ${F} font-size="13" text-anchor="middle" fill="#fff">${title}</text>
+        <text y="96" font-family="system-ui" font-size="10.5" text-anchor="middle" fill="#e8f3ec">${a}</text>
+        <text y="108" font-family="system-ui" font-size="10.5" text-anchor="middle" fill="#e8f3ec">${b}</text></g>`
+      )
+      .join('')}</svg>`;
+}
+function rbLanes(): string {
+  return rbBase(
+    `<rect x="148" y="122" width="66" height="78" fill="#50545a"/><line x1="192" y1="130" x2="192" y2="200" stroke="#fff" stroke-width="2" stroke-dasharray="6 5"/>
+    <text x="196" y="190" ${F} font-size="20" fill="#fff">↑↱</text><text x="160" y="190" ${F} font-size="20" fill="#fff">↰↑</text>
+    <text x="222" y="150" ${F} font-size="12" fill="#fff">Right lane:</text><text x="222" y="165" ${F} font-size="12" fill="#fff">right / ahead</text>
+    <text x="12" y="150" ${F} font-size="12" fill="#fff">Left lane:</text><text x="12" y="165" ${F} font-size="12" fill="#fff">left / ahead</text>`,
+    'Two-lane approach: left lane for left or ahead, right lane for right or ahead, following the arrows'
+  );
+}
+function magicDiagram(): string {
+  return `<svg viewBox="0 0 340 190" role="img" aria-label="The Magic Roundabout: a ring road with several mini-roundabouts, each treated separately"><rect width="340" height="190" rx="12" fill="#78a656"/>
+    <rect x="95" y="30" width="150" height="130" fill="none" stroke="#50545a" stroke-width="22"/>
+    <rect x="159" y="0" width="22" height="30" fill="#50545a"/><rect x="245" y="84" width="95" height="22" fill="#50545a"/><rect x="0" y="84" width="95" height="22" fill="#50545a"/>
+    ${[
+      [170, 30],
+      [245, 95],
+      [95, 95]
+    ]
+      .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="17" fill="#50545a"/><circle cx="${x}" cy="${y}" r="6" fill="#fff"/>`)
+      .join('')}
+    <text x="170" y="100" ${F} font-size="13" text-anchor="middle" fill="#fff">Treat each</text><text x="170" y="116" ${F} font-size="13" text-anchor="middle" fill="#fff">mini separately</text>
+    <text x="170" y="182" ${F} font-size="11" text-anchor="middle" fill="#fff">Rules 189 and 190</text></svg>`;
 }
