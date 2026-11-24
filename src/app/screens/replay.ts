@@ -32,7 +32,7 @@ export function openReplay(clip: FaultClip): void {
       cv,
       caption,
       h('div', { class: 'bubble-wrap' }, h('div', { html: maggieSvg('neutral', 44) }), h('div', { class: 'bubble' }, h('span', { class: 'who' }, clip.fault.category), clip.fault.message)),
-      ref ? h('div', { class: 'explain' }, h('b', {}, `Highway Code rule ${ref.rule}: ${ref.title}. `), ref.summary, h('div', { style: { marginTop: '6px' } }, ruleChips(clip.fault.rules))) : null,
+      ref ? h('div', { class: 'explain' }, h('b', {}, `Highway Code rule ${ref.label ?? ref.rule}: ${ref.title}. `), ref.summary, h('div', { style: { marginTop: '6px' } }, ruleChips(clip.fault.rules))) : null,
       h('button', { class: 'btn secondary', onclick: () => (t0 = performance.now()) }, '↻ Watch again')
     )
   );

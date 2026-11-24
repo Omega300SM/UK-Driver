@@ -506,6 +506,12 @@ const signs: SignPlacement[] = [
   { kind: 'name', text: 'Wharf Street', x: 125, z: MAGIC_C.z + H + 1.6, faces: W },
   { kind: 'zone20', x: 140, z: MAGIC_C.z - H - 1.2, faces: E },
   { kind: 'zone20-end', x: 140, z: MAGIC_C.z + H + 1.2, faces: W },
+  { kind: 'warn-school', x: -150 + H + 1.4, z: 50, faces: N },
+  { kind: 'warn-school', x: -150 - H - 1.4, z: 140, faces: S },
+  { kind: 'zone20', x: -150 + H + 1.2, z: 62, faces: N },
+  { kind: 'zone20-end', x: -150 - H - 1.2, z: 62, faces: S },
+  { kind: 'zone20', x: -150 - H - 1.2, z: 128, faces: S },
+  { kind: 'zone20-end', x: -150 + H + 1.2, z: 128, faces: N },
   { kind: 'name', text: 'The Magic Roundabout', x: 200 - H - 1.6, z: MAGIC_C.z + MAGIC_HALF + 16, faces: S }
 ];
 // Advance direction signs ("map" signs) on the approaches to R1 and R2.
@@ -575,12 +581,36 @@ const markers: Marker[] = [
   { id: 's7-setup', label: '', x0: 57, x1: 64, z0: -89, z1: -80 },
   { id: 'pp-setup', label: '', x0: 99, x1: 101.6, z0: -67, z1: -59 },
   { id: 'bridge-north', label: '', x0: 100, x1: 100 + H, z0: -100, z1: -40 },
+  { id: 'RW1', label: 'The Ringway, on the left', x0: -118, x1: -98, z0: 180 - H, z1: 180 - H + 2.8 },
+  { id: 'ringway-w-in', label: '', x0: -150, x1: -146.2, z0: 13, z1: 40 },
+  { id: 'k1-approach-n', label: '', x0: -150, x1: -146.2, z0: 60, z1: 92.8 },
+  { id: 'ringway-w-north', label: '', x0: -150, x1: -146.2, z0: 100, z1: 170 },
   { id: 'mn-approach-n', label: '', x0: 196, x1: 200 + H, z0: -165, z1: -125 },
   { id: 'southway-s', label: '', x0: 200 - H, x1: 200, z0: -120, z1: -40 }
 ];
 
 // ---- Signals, crossings and stop lines (rules 175–178, 191–199) ----------------
+// St Anne's Primary School on Ringway West: a school crossing patrol (rule 210),
+// and people crossing the Ringway at its junction with Mill Road (rule H2).
+export const SCHOOL = { x0: -143, x1: -120, z0: 74, z1: 118 };
 const crossings: Crossing[] = [
+  {
+    id: 'K1',
+    kind: 'patrol',
+    name: 'St Anne’s school crossing patrol',
+    area: { x0: -150 - H, x1: -150 + H, z0: 94, z1: 96.5 },
+    axis: 'z',
+    zigzag: []
+  },
+  {
+    id: 'H2',
+    kind: 'informal',
+    name: 'Ringway at Mill Road',
+    area: { x0: -150 - H, x1: -150 + H, z0: 10, z1: 12 },
+    axis: 'z',
+    zigzag: [],
+    approachFrom: 1
+  },
   {
     id: 'P1',
     kind: 'pelican',
@@ -659,7 +689,11 @@ const stopLines: StopLine[] = [
   { id: 'Z1-e', x: 41.6, z: -130 - LANE, heading: E, crossing: 'Z1' },
   { id: 'Z1-w', x: 48.4, z: -130 + LANE, heading: W, crossing: 'Z1' },
   { id: 'U1-s', x: 100 - LANE, z: -171.3, heading: S, signal: sig('U1', 'road'), crossing: 'U1' },
-  { id: 'U1-n', x: 100 + LANE, z: -178.7, heading: N, signal: sig('U1', 'road'), crossing: 'U1' }
+  { id: 'U1-n', x: 100 + LANE, z: -178.7, heading: N, signal: sig('U1', 'road'), crossing: 'U1' },
+  { id: 'K1-n', x: -150 + LANE, z: 92.6, heading: N, crossing: 'K1' },
+  { id: 'K1-s', x: -150 - LANE, z: 97.9, heading: S, crossing: 'K1' },
+  { id: 'H2-n', x: -150 + LANE, z: 9.3, heading: N, crossing: 'H2' },
+  { id: 'H2-s', x: -150 - LANE, z: 12.7, heading: S, crossing: 'H2' }
 ];
 // No centre line across crossings or the box junction.
 {
@@ -685,8 +719,9 @@ for (const l of stopLines) {
   const fx = Math.sin(l.heading);
   const fz = Math.cos(l.heading);
   const [lx2, lz2] = [fz * LANE, -fx * LANE];
-  const kind = l.signal ? 'stop' : 'giveway';
-  seg(kind, l.x - lx2, l.z - lz2, l.x + lx2, l.z + lz2);
+  const cr = crossings.find((c) => c.id === l.crossing);
+  if (!l.signal && cr?.kind !== 'zebra') continue; // patrols and junction mouths have no line
+  seg(l.signal ? 'stop' : 'giveway', l.x - lx2, l.z - lz2, l.x + lx2, l.z + lz2);
 }
 
 const obstacles: Obstacle[] = [
@@ -718,6 +753,7 @@ export const MILL_TOWN: SceneLayout = {
   obstacles,
   markers,
   speedZones: [
+    { name: 'St Anne’s school 20 zone', mph: 20, x0: -156, x1: -144, z0: 62, z1: 128 },
     { name: 'Magic Roundabout 20 zone', mph: 20, x0: 140, x1: 305, z0: -265, z1: -160 },
     { name: 'Mill Town', mph: 30, x0: -300, x1: 320, z0: -300, z1: 220 }
   ],
@@ -734,6 +770,7 @@ export const MILL_TOWN: SceneLayout = {
   crossings,
   signals,
   carParks: [CAR_PARK],
+  schoolZigzags: [{ x0: -150 + H - 1.2, x1: -150 + H, z0: 100, z1: 114 }],
   boxes: [{ id: 'J1', x0: 100 - H, x1: 100 + H, z0: -130 - H, z1: -130 + H }],
   busLanes: [{ ...BUS_LANE, heading: W, hours: 'At any time' }]
 };

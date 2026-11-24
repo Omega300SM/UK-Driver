@@ -144,7 +144,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
   const AI_MAX = 24;
   const aiBox = baseBox();
   const aiBodies = instanced(aiBox, lambert(0xffffff), Array.from({ length: AI_MAX }, () => ({ x: 0, z: 0, sx: 1.8, sy: 0.62, sz: 4.2, color: 0xffffff })));
-  const aiCabs = instanced(aiBox, lambert(0x2b3440), Array.from({ length: AI_MAX }, () => ({ x: 0, z: 0 })));
+  const aiCabs = instanced(aiBox, lambert(0xffffff), Array.from({ length: AI_MAX }, () => ({ x: 0, z: 0, color: 0x2b3440 })));
   const aiShadows = instanced(aiBox, new THREE.MeshBasicMaterial({ color: 0, transparent: true, opacity: 0.25, depthWrite: false }), Array.from({ length: AI_MAX }, () => ({ x: 0, z: 0 })));
   for (const m of [aiBodies, aiCabs, aiShadows]) {
     m.frustumCulled = false;
@@ -155,18 +155,39 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
   const renderTraffic = () => {
     const cars = traffic.cars.slice(0, AI_MAX);
     cars.forEach((c, i) => {
+      const kind = c.kind ?? 'car';
       aiDummy.rotation.set(0, c.heading, 0);
-      aiDummy.position.set(c.x, 0.3, c.z);
-      aiDummy.scale.set(1.8, 0.62, 4.2);
+      // Body: car, bicycle (thin frame), or horse; "cab" is the rider for bikes and horses.
+      if (kind === 'bike') {
+        aiDummy.position.set(c.x, 0.25, c.z);
+        aiDummy.scale.set(0.12, 0.8, 1.7);
+      } else if (kind === 'horse') {
+        aiDummy.position.set(c.x, 0.35, c.z);
+        aiDummy.scale.set(0.6, 1.3, 2.2);
+      } else {
+        aiDummy.position.set(c.x, 0.3, c.z);
+        aiDummy.scale.set(1.8, 0.62, 4.2);
+      }
       aiDummy.updateMatrix();
       aiBodies.setMatrixAt(i, aiDummy.matrix);
-      aiBodies.setColorAt(i, aiColour.setHex(c.colour));
-      aiDummy.position.set(c.x, 0.92, c.z);
-      aiDummy.scale.set(1.6, 0.55, 2.2);
+      aiBodies.setColorAt(i, aiColour.setHex(kind === 'horse' ? 0x6b4a2e : kind === 'bike' ? 0x2b2f36 : c.colour));
+      if (kind === 'bike') {
+        aiDummy.position.set(c.x, 1.0, c.z);
+        aiDummy.scale.set(0.45, 0.75, 0.45);
+      } else if (kind === 'horse') {
+        aiDummy.position.set(c.x, 1.75, c.z);
+        aiDummy.scale.set(0.45, 0.75, 0.45);
+      } else {
+        aiDummy.position.set(c.x, 0.92, c.z);
+        aiDummy.scale.set(1.6, 0.55, 2.2);
+      }
       aiDummy.updateMatrix();
       aiCabs.setMatrixAt(i, aiDummy.matrix);
+      if (kind !== 'car') aiCabs.setColorAt(i, aiColour.setHex(0xd6f22b)); // hi-vis
+      else aiCabs.setColorAt(i, aiColour.setHex(0x2b3440));
       aiDummy.position.set(c.x, 0.015, c.z);
-      aiDummy.scale.set(2.2, 0.01, 4.6);
+      if (kind === 'car') aiDummy.scale.set(2.2, 0.01, 4.6);
+      else aiDummy.scale.set(0.9, 0.01, kind === 'horse' ? 2.8 : 2);
       aiDummy.updateMatrix();
       aiShadows.setMatrixAt(i, aiDummy.matrix);
     });
@@ -175,6 +196,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
       m.instanceMatrix.needsUpdate = true;
     }
     if (aiBodies.instanceColor) aiBodies.instanceColor.needsUpdate = true;
+    if (aiCabs.instanceColor) aiCabs.instanceColor.needsUpdate = true;
   };
 
   // ---------- Sim + rules ----------
@@ -398,6 +420,8 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
         return `rbEnter.${ev.rb}`;
       case 'stopLine':
         return `line.${ev.line}`;
+      case 'passVulnerable':
+        return `passed.${ev.kind}`;
       default:
         return ev.type;
     }
@@ -441,6 +465,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
       case 'rbEnter':
       case 'rbExit':
       case 'line':
+      case 'passed':
         return stepEvents.has(trig);
       case 'look':
         return stepEvents.has(`shoulder.${arg}`);
@@ -662,6 +687,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
       analyser.roundabouts(t, signal, emit);
       analyser.detectTurn(t, emit);
       analyser.streetEvents(t, dt, signal, emit);
+      analyser.vulnerable(t, emit);
     }
     recorder.push({ t, x: car.x, z: car.z, heading: car.heading, speed: car.speed, steer, signal, brake: brakeValue });
 

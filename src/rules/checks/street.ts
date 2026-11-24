@@ -23,10 +23,15 @@ export function stopLineCheck(): Check {
         const stopDist = (v * v) / (2 * STREET_TUNING.amberDecel);
         if (ev.amberAt.dist > stopDist + STREET_TUNING.amberMarginM) out.push('amber-light');
       }
-      if (ev.pedsOn > 0) {
+      if (ev.kind === 'patrol') {
+        // The patrol steps out with the sign whenever children are waiting or crossing (rule 210).
         if (ev.pedInPath) out.push('crossing-ped-dangerous');
-        else out.push(ev.kind === 'zebra' ? 'zebra-give-way' : 'crossing-ped');
+        else if (ev.pedsOn > 0 || ev.pedWaiting) out.push('patrol-stop');
+      } else if (ev.pedsOn > 0) {
+        if (ev.pedInPath) out.push('crossing-ped-dangerous');
+        else out.push(ev.kind === 'zebra' ? 'zebra-give-way' : ev.kind === 'informal' ? 'junction-ped' : 'crossing-ped');
       } else if (ev.kind === 'zebra' && ev.pedWaiting) out.push('zebra-waiting');
+      else if (ev.kind === 'informal' && ev.pedWaiting) out.push('junction-ped-waiting');
       return out.length ? out : null;
     }
   };
@@ -79,6 +84,39 @@ export function zigzagPullUpCheck(): Check {
   };
 }
 
+/** Passing cyclists and horse riders (rules 163, 212, 215). */
+export function passingCheck(): Check {
+  return {
+    id: 'passing-vulnerable',
+    onEvent(ev) {
+      if (ev.type !== 'passVulnerable') return null;
+      const mph = ev.speed * 2.236936;
+      if (ev.kind === 'horse') return ev.gap < VRU_TUNING.horseGapM || mph > VRU_TUNING.horseMaxMph ? 'pass-horse' : null;
+      if (ev.gap < VRU_TUNING.cyclistDangerM) return 'pass-cyclist-dangerous';
+      const need = mph > 30 ? VRU_TUNING.cyclistGapFastM : VRU_TUNING.cyclistGapM;
+      return ev.gap < need ? 'pass-cyclist-close' : null;
+    }
+  };
+}
+
+/** Rule 163's guide distances, with a little allowance for the sim's precision. */
+export const VRU_TUNING = {
+  cyclistGapM: 1.4,
+  cyclistGapFastM: 1.9,
+  cyclistDangerM: 0.7,
+  horseGapM: 1.9,
+  horseMaxMph: 11
+};
+
+export function schoolPullUpCheck(): Check {
+  return {
+    id: 'school-pull-up',
+    onEvent(ev) {
+      return ev.type === 'finish' && ev.pullUp?.onSchoolZigzag ? 'park-school' : null;
+    }
+  };
+}
+
 export function streetChecks(): Check[] {
-  return [stopLineCheck(), blockCrossingCheck(), boxJunctionCheck(), busLaneCheck(), zigzagPullUpCheck()];
+  return [stopLineCheck(), blockCrossingCheck(), boxJunctionCheck(), busLaneCheck(), zigzagPullUpCheck(), passingCheck(), schoolPullUpCheck()];
 }

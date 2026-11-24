@@ -9,7 +9,10 @@ export type WorldId = 1 | 2 | 3 | 4;
 
 /** A Highway Code rule reference, verified against gov.uk (see NEEDS_REVIEW.md). */
 export interface RuleRef {
+  /** Numeric key. The 2022 hierarchy rules H1–H3 use 901–903 with a `label`. */
   rule: number;
+  /** Shown instead of the number (e.g. "H2"). */
+  label?: string;
   title: string;
   /** Faithful one-line paraphrase. Words in capitals mirror the Code's MUST / MUST NOT. */
   summary: string;
@@ -101,6 +104,7 @@ export type Trigger =
   | `rbExit.${string}`
   | `line.${string}`
   | `parkedIn.${string}`
+  | `passed.${string}`
   | `marker.${string}`
   | `stoppedAt.${string}`;
 
@@ -148,7 +152,11 @@ export interface ScriptedCar {
   speed: number;
   /** Stop and wait here if the way ahead is blocked by the player. */
   colour?: number;
+  /** A cyclist or horse rider instead of a car (keeps to `speed`). */
+  kind?: RoadUserKind;
 }
+
+export type RoadUserKind = 'car' | 'bike' | 'horse';
 
 export interface DriveSetup {
   start?: { x: number; z: number; heading: number };

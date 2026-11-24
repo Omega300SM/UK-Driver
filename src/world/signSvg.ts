@@ -134,6 +134,10 @@ function body(spec: SignSpec): string {
         <line x1="${cx}" y1="96" x2="${cx}" y2="${cy + 11}" stroke="#111" stroke-width="7"/>
         <circle cx="${cx}" cy="${cy}" r="10" fill="none" stroke="#111" stroke-width="6"/>${arms}`;
     }
+    case 'warn-school':
+      // Two children walking.
+      return triangle(`<circle cx="42" cy="40" r="5" fill="#111"/><circle cx="60" cy="44" r="4.2" fill="#111"/>
+        <path d="M42 46 L40 62 L34 76 M40 62 L46 76 M42 50 L50 56 M58 49 L57 63 L52 76 M57 63 L62 76 M58 52 L51 56" stroke="#111" stroke-width="4.5" stroke-linecap="round" fill="none"/>`);
     case 'warn-signals':
       return triangle(`<rect x="41" y="34" width="18" height="44" rx="4" fill="#111"/>
         <circle cx="50" cy="43" r="5.5" fill="${RED}"/><circle cx="50" cy="56" r="5.5" fill="#f2b705"/><circle cx="50" cy="69" r="5.5" fill="#1f9d55"/>`);
@@ -189,6 +193,8 @@ export function signName(spec: SignSpec): string {
       return 'Advance direction sign for a roundabout';
     case 'warn-signals':
       return 'Traffic signals ahead';
+    case 'warn-school':
+      return 'Children going to or from school';
     case 'warn-pedestrians':
       return 'Pedestrian crossing ahead';
     case 'bus-lane':

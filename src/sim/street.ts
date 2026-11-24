@@ -111,6 +111,8 @@ export interface Pedestrian {
   leg: number;
   colour: number;
   waitedS: number;
+  /** Children (at the school crossing patrol). */
+  child?: boolean;
   done?: boolean;
 }
 
@@ -176,8 +178,14 @@ export class StreetControl {
     return this.peds.filter((p) => p.crossing.id === crossingId && p.state === 'cross');
   }
 
-  pedWaiting(crossingId: string): boolean {
-    return this.peds.some((p) => p.crossing.id === crossingId && p.state === 'wait');
+  /** Someone has been waiting at the kerb for at least `minWaitS` (long enough for a driver to see them). */
+  pedWaiting(crossingId: string, minWaitS = 1.2): boolean {
+    return this.peds.some((p) => p.crossing.id === crossingId && p.state === 'wait' && p.waitedS >= minWaitS);
+  }
+
+  /** A school crossing patrol is out in the road with the sign while children wait or cross (rule 210). */
+  patrolActive(crossingId: string): boolean {
+    return this.peds.some((p) => p.crossing.id === crossingId && (p.state === 'wait' || p.state === 'cross'));
   }
 
   /** Time (s) the signal at a line has shown its current aspect. */
@@ -198,7 +206,9 @@ export class StreetControl {
     if (asp === 'amber') return dist > (speed * speed) / (2 * AMBER_DECEL) + 0.5;
     if (asp === 'flashAmber') return onCrossing;
     if (onCrossing) return true; // rule 198: give way to anyone still crossing
-    if (crossing?.kind === 'zebra' && this.pedWaiting(crossing.id)) return dist > (speed * speed) / (2 * 5) - 0.5; // rule 195
+    const canStop = dist > (speed * speed) / (2 * 5) - 0.5;
+    if (crossing?.kind === 'patrol' && this.patrolActive(crossing.id)) return canStop; // rule 210
+    if ((crossing?.kind === 'zebra' || crossing?.kind === 'informal') && this.pedWaiting(crossing.id)) return canStop; // rules 195, H2
     return false;
   }
 
@@ -242,7 +252,7 @@ export class StreetControl {
   private spawn(cr: Crossing, progress: number): void {
     const a = cr.area;
     const side = this.rnd() < 0.5 ? 0 : 1;
-    const along = (this.rnd() < 0.5 ? -1 : 1) * (10 + this.rnd() * 8);
+    const along = (cr.approachFrom ?? (this.rnd() < 0.5 ? -1 : 1)) * (10 + this.rnd() * 8);
     // Walk line across: a random spot within the crossing's width.
     let route: Array<[number, number]>;
     if (cr.axis === 'x') {
@@ -254,7 +264,7 @@ export class StreetControl {
         [x + along, near + off],
         [x, near],
         [x, far],
-        [x - along, far - off]
+        [x + (cr.approachFrom ? along : -along), far - off]
       ];
     } else {
       const z = a.z0 + 0.5 + this.rnd() * (a.z1 - a.z0 - 1);
@@ -265,7 +275,7 @@ export class StreetControl {
         [near + off, z + along],
         [near, z],
         [far, z],
-        [far - off, z - along]
+        [far - off, z + (cr.approachFrom ? along : -along)]
       ];
     }
     const [sx, sz] = route[0];
@@ -281,8 +291,10 @@ export class StreetControl {
       route,
       leg: 1,
       colour: PED_COLOURS[this.nextId % PED_COLOURS.length],
-      waitedS: 0
+      waitedS: 0,
+      child: cr.kind === 'patrol'
     };
+    if (p.child) p.speed *= 0.9;
     this.peds.push(p);
   }
 

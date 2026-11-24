@@ -68,7 +68,7 @@ export type DriveEvent =
       t: number;
       line: string;
       /** 'signals' for a junction; otherwise the crossing kind. */
-      kind: 'signals' | 'zebra' | 'pelican' | 'puffin' | 'toucan';
+      kind: 'signals' | 'zebra' | 'pelican' | 'puffin' | 'toucan' | 'patrol' | 'informal';
       /** What the lights showed (null at a zebra). */
       aspect: 'green' | 'amber' | 'red' | 'redAmber' | 'flashAmber' | null;
       /** Distance (m) from the line when the lights turned amber, and our speed then (m/s). */
@@ -78,6 +78,14 @@ export type DriveEvent =
       pedInPath: boolean;
       /** Someone waiting at the kerb of a zebra. */
       pedWaiting: boolean;
+    }
+  | {
+      /** Overtook a cyclist or horse rider: closest side-to-side gap (m) and top speed while alongside (m/s). */
+      type: 'passVulnerable';
+      t: number;
+      kind: 'bike' | 'horse';
+      gap: number;
+      speed: number;
     }
   | {
       /** Stopped with part of the car on a pedestrian crossing (rule 192). */
@@ -150,7 +158,7 @@ export type DriveEvent =
       handbrake: boolean;
       gear: Gear;
       /** Where the car was pulled up, when the lesson asked for a pull-up on the left. */
-      pullUp?: { onYellow: 'double' | 'single' | null; nearJunctionM: number | null; onDoubleWhite: boolean; kerbGap: number; onZigzag?: boolean; inBusLane?: boolean };
+      pullUp?: { onYellow: 'double' | 'single' | null; nearJunctionM: number | null; onDoubleWhite: boolean; kerbGap: number; onZigzag?: boolean; inBusLane?: boolean; onSchoolZigzag?: boolean };
       /** For a parking manoeuvre: how well the car finished in the space. */
       parked?: ParkResult;
     };

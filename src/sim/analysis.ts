@@ -2,6 +2,7 @@ import type { Car } from './car';
 import type { Traffic } from './traffic';
 import type { Recorder } from '../rules/recorder';
 import type { StreetControl } from './street';
+import { ROAD_USER_SIZE } from './traffic';
 import type { DriveEvent, SignalState } from '../rules/types';
 import { mph } from '../rules/types';
 import { angleDiff } from '../rules/checks';
@@ -48,6 +49,15 @@ export class RoadAnalyser {
           clearance = clearance === null ? gap : Math.min(clearance, gap);
         }
       }
+    }
+    // Overtaking a cyclist or horse rider counts as passing something on our side (rule 163).
+    for (const c of traffic.cars) {
+      if ((c.kind ?? 'car') === 'car') continue;
+      const dx = c.x - car.x;
+      const dz = c.z - car.z;
+      const along = dx * fx + dz * fz;
+      const across = dx * rx + dz * rz;
+      if (Math.cos(c.heading - car.heading) > 0.7 && across < 0.5 && across > -4.6 && along > -6 && along < 14) passingObstruction = true;
     }
     const oncomingM = passingObstruction ? traffic.oncoming(car.x, car.z, car.heading) : null;
     const inDoubleWhite = (L.doubleWhite ?? []).some((r) => inRect(r, car.x, car.z));
@@ -214,6 +224,41 @@ export class RoadAnalyser {
     emit({ type: 'turn', t, dir: turnDh > 0 ? 'left' : 'right', startT: startF.t, signalAtStart: startF.signal });
   }
 
+  // ---------- Overtaking cyclists and horse riders (rules 163, 212, 215) ----------
+  private passing = new Map<number, { minGap: number; maxSpeed: number; alongside: boolean }>();
+  vulnerable(t: number, emit: Emit): void {
+    const { car, traffic } = this;
+    const [fx, fz] = car.forward;
+    const [rx, rz] = car.right;
+    for (const c of traffic.cars) {
+      const kind = c.kind ?? 'car';
+      if (kind === 'car') continue;
+      const size = ROAD_USER_SIZE[kind];
+      const dx = c.x - car.x;
+      const dz = c.z - car.z;
+      const along = dx * fx + dz * fz;
+      const across = dx * rx + dz * rz;
+      const st = this.passing.get(c.id) ?? { minGap: Infinity, maxSpeed: 0, alongside: false };
+      const reach = car.length / 2 + size.len / 2 + 1.5;
+      if (Math.abs(along) < reach && Math.abs(across) < 6 && Math.cos(c.heading - car.heading) > 0.5) {
+        st.alongside = true;
+        st.minGap = Math.min(st.minGap, Math.abs(across) - car.width / 2 - size.wid / 2);
+        st.maxSpeed = Math.max(st.maxSpeed, Math.abs(car.speed));
+      } else if (st.alongside && along < -reach) {
+        // We've gone past them.
+        emit({ type: 'passVulnerable', t, kind, gap: st.minGap, speed: st.maxSpeed });
+        st.alongside = false;
+        st.minGap = Infinity;
+        st.maxSpeed = 0;
+      } else if (Math.abs(along) > 40) {
+        st.alongside = false;
+        st.minGap = Infinity;
+        st.maxSpeed = 0;
+      }
+      this.passing.set(c.id, st);
+    }
+  }
+
   // ---------- Signals, crossings and box junctions ----------
   private stopState = new Map<string, { before: boolean; amberAt: { dist: number; speed: number } | null; lastAspect: string | null }>();
   private blocked = new Set<string>();
@@ -256,7 +301,7 @@ export class RoadAnalyser {
           amberAt: aspect === 'amber' ? st.amberAt : null,
           pedsOn: on.length,
           pedInPath,
-          pedWaiting: cr?.kind === 'zebra' ? street.pedWaiting(cr.id) : false
+          pedWaiting: cr && (cr.kind === 'zebra' || cr.kind === 'informal' || cr.kind === 'patrol') ? street.pedWaiting(cr.id) : false
         });
         st.before = false;
         st.amberAt = null;
@@ -317,7 +362,8 @@ export class RoadAnalyser {
     }
     const onZigzag = (L.crossings ?? []).some((c) => [c.area, ...c.zigzag].some((r) => car.corners().some(([px, pz]) => inRect(r, px, pz))));
     const inBusLane = (L.busLanes ?? []).some((b) => inRect(b, car.x, car.z));
-    return { onYellow, nearJunctionM, onDoubleWhite, kerbGap, onZigzag, inBusLane };
+    const onSchoolZigzag = (L.schoolZigzags ?? []).some((r) => car.corners().some(([px, pz]) => inRect(r, px, pz)));
+    return { onYellow, nearJunctionM, onDoubleWhite, kerbGap, onZigzag, inBusLane, onSchoolZigzag };
   }
 }
 

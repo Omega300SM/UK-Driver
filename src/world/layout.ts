@@ -68,6 +68,7 @@ export type SignKind =
   | 'mini-roundabout'
   | 'roundabout-map'
   | 'warn-signals'
+  | 'warn-school'
   | 'warn-pedestrians'
   | 'bus-lane'
   | 'name';
@@ -161,7 +162,8 @@ export interface StopLine {
   crossing?: string;
 }
 
-export type CrossingKind = 'zebra' | 'pelican' | 'puffin' | 'toucan';
+/** 'patrol' = a school crossing patrol (lollipop person); 'informal' = people crossing a side road at a junction (rule H2). */
+export type CrossingKind = 'zebra' | 'pelican' | 'puffin' | 'toucan' | 'patrol' | 'informal';
 
 /** A pedestrian crossing across a straight road. */
 export interface Crossing {
@@ -176,6 +178,8 @@ export interface Crossing {
   controller?: string;
   /** Zig-zag areas either side (no stopping, no overtaking: rule 191). */
   zigzag: Rect[];
+  /** People only arrive along the pavement from this side (+1 = higher x/z), e.g. at a junction mouth. */
+  approachFrom?: 1 | -1;
 }
 
 /** Traffic signals: a junction (two groups that take turns) or a signal-controlled crossing. */
@@ -227,6 +231,8 @@ export interface SceneLayout {
   crossings?: Crossing[];
   signals?: SignalController[];
   boxes?: BoxJunction[];
+  /** School Keep Clear zig-zags (no stopping: rule 243). */
+  schoolZigzags?: Rect[];
   /** Off-road car parks (turns inside them aren't judged as road turns). */
   carParks?: Rect[];
   busLanes?: BusLane[];

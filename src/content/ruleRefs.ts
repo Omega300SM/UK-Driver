@@ -3,7 +3,7 @@ import type { RuleRef } from './schema';
 const HC = 'https://www.gov.uk/guidance/the-highway-code';
 
 /**
- * Highway Code references. Text paraphrased from gov.uk, checked 23–24 Nov 2026 (Days 1–12).
+ * Highway Code references. Text paraphrased from gov.uk, checked 23–24 Nov 2026 (Days 1–13).
  * Add new rules here and cite them by number from lessons and faults.
  */
 export const RULES: Record<number, RuleRef> = {
@@ -94,7 +94,7 @@ export const RULES: Record<number, RuleRef> = {
     rule: 163,
     title: 'Overtaking and obstructions',
     summary:
-      'Among other things: give way to oncoming vehicles before passing parked vehicles or other obstructions on your side of the road.',
+      'Overtake only when safe and legal. Give way to oncoming vehicles before passing parked vehicles or obstructions on your side. As a guide, leave at least 1.5 metres when overtaking cyclists at up to 30 mph (more at higher speeds), and pass horse riders at under 10 mph with at least 2 metres.',
     url: `${HC}/using-the-road-159-to-203`
   },
   170: {
@@ -279,6 +279,84 @@ export const RULES: Record<number, RuleRef> = {
     title: 'Don’t reverse too far',
     summary: 'You MUST NOT reverse your vehicle further than necessary.',
     url: `${HC}/using-the-road-159-to-203`
+  },
+  901: {
+    rule: 901,
+    label: 'H1',
+    title: 'The hierarchy of road users',
+    summary:
+      'Everyone must be considerate, but those in charge of vehicles that can cause the greatest harm bear the greatest responsibility to take care and reduce the danger they pose to others.',
+    url: `${HC}/introduction`
+  },
+  902: {
+    rule: 902,
+    label: 'H2',
+    title: 'Pedestrians at junctions',
+    summary:
+      'At a junction you should give way to pedestrians crossing or waiting to cross a road into which or from which you are turning. You MUST give way to pedestrians on a zebra crossing.',
+    url: `${HC}/introduction`
+  },
+  903: {
+    rule: 903,
+    label: 'H3',
+    title: 'Don’t cut across cyclists and horse riders',
+    summary:
+      'Do not cut across cyclists, horse riders or horse-drawn vehicles going ahead when you turn into or out of a junction or change lane. Don’t turn if it would make them stop or swerve: wait for a safe gap.',
+    url: `${HC}/introduction`
+  },
+  204: {
+    rule: 204,
+    title: 'Road users most at risk',
+    summary:
+      'Pedestrians (especially children, older adults and disabled people), cyclists, horse riders and motorcyclists are most at risk. Those who can cause the greatest harm have the greatest responsibility to reduce danger.',
+    url: `${HC}/road-users-requiring-extra-care-204-to-225`
+  },
+  207: {
+    rule: 207,
+    title: 'Particularly vulnerable pedestrians',
+    summary:
+      'Children and older people may not judge your speed and could step out. At 40 mph you will probably kill a pedestrian you hit; at 20 mph there is about a 1 in 20 chance. Give older people time; don’t rev or edge forward.',
+    url: `${HC}/road-users-requiring-extra-care-204-to-225`
+  },
+  208: {
+    rule: 208,
+    title: 'Near schools',
+    summary: 'Drive slowly and be particularly aware of young cyclists and pedestrians. A flashing amber signal under a School sign means children may be crossing ahead.',
+    url: `${HC}/road-users-requiring-extra-care-204-to-225`
+  },
+  210: {
+    rule: 210,
+    title: 'School crossing patrols',
+    summary: 'You MUST stop when a school crossing patrol shows a ‘Stop for children’ sign.',
+    url: `${HC}/road-users-requiring-extra-care-204-to-225`
+  },
+  211: {
+    rule: 211,
+    title: 'Look out for cyclists and motorcyclists',
+    summary:
+      'They are often hard to see, especially at junctions, alongside you or filtering. Look out for them before you emerge, and don’t turn if it would make a cyclist going ahead stop or swerve.',
+    url: `${HC}/road-users-requiring-extra-care-204-to-225`
+  },
+  212: {
+    rule: 212,
+    title: 'Give vulnerable road users room',
+    summary:
+      'Give motorcyclists, cyclists, horse riders and pedestrians walking in the road at least as much room as you would a car when overtaking, and more in bad weather and at night.',
+    url: `${HC}/road-users-requiring-extra-care-204-to-225`
+  },
+  213: {
+    rule: 213,
+    title: 'Cyclists in the centre of the lane',
+    summary:
+      'On narrow or quiet roads, at junctions and in slow traffic, cyclists may ride in the centre of the lane, and groups may ride two abreast. Allow them to do so for their safety.',
+    url: `${HC}/road-users-requiring-extra-care-204-to-225`
+  },
+  215: {
+    rule: 215,
+    title: 'Horse riders',
+    summary:
+      'Be particularly careful of horse riders. Slow to a maximum of 10 mph, be patient, don’t sound your horn or rev, and when safe pass wide and slow, allowing at least 2 metres.',
+    url: `${HC}/road-users-requiring-extra-care-204-to-225`
   },
   184: {
     rule: 184,

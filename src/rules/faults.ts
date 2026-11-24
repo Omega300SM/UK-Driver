@@ -342,6 +342,48 @@ export const FAULTS = {
     message: 'We finished a long way out from the kerb. Aim to be close and parallel, about a drain cover’s width away.',
     rules: [239]
   },
+  'pass-cyclist-close': {
+    severity: 'serious',
+    category: 'Clearance – cyclists',
+    message: 'We passed that cyclist too close. Leave at least a metre and a half at up to 30 mph, and more when faster. If there isn’t room, wait behind.',
+    rules: [163, 212]
+  },
+  'pass-cyclist-dangerous': {
+    severity: 'dangerous',
+    category: 'Clearance – cyclists',
+    message: 'We squeezed right past that cyclist. Any wobble and we’d have hit them. I had to step in.',
+    rules: [163, 212, 901]
+  },
+  'pass-horse': {
+    severity: 'serious',
+    category: 'Clearance – horse riders',
+    message: 'We passed the horse rider too fast or too close. Slow to 10 mph or less and leave at least two metres. Horses can spook.',
+    rules: [163, 215]
+  },
+  'patrol-stop': {
+    severity: 'serious',
+    category: 'Response to signals – school crossing patrol',
+    message: 'The school crossing patrol was holding up the Stop for children sign. You MUST stop for that.',
+    rules: [210]
+  },
+  'junction-ped': {
+    severity: 'serious',
+    category: 'Junctions – pedestrians',
+    message: 'Someone was crossing the road we were turning into, and we didn’t give way. People crossing at a junction have priority.',
+    rules: [902]
+  },
+  'junction-ped-waiting': {
+    severity: 'minor',
+    category: 'Junctions – pedestrians',
+    message: 'Someone was waiting to cross the side road we turned into. Give way to people waiting to cross at a junction, too.',
+    rules: [902]
+  },
+  'park-school': {
+    severity: 'serious',
+    category: 'Normal stops',
+    message: 'We stopped on the School Keep Clear markings. Don’t stop or park near a school entrance: children need to see and be seen.',
+    rules: [243]
+  },
   'not-secured': {
     severity: 'minor',
     category: 'Control – securing the car',

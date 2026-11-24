@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { BuiltScene } from './carPark';
-import { MILL_TOWN, ROADS, R1, R2, M1, MAGIC, MAGIC_CENTRE, MAGIC_HALF_SIZE, R2_FLARE, H, CAR_PARK } from './millTownLayout';
+import { MILL_TOWN, ROADS, R1, R2, M1, MAGIC, MAGIC_CENTRE, MAGIC_HALF_SIZE, R2_FLARE, H, CAR_PARK, SCHOOL } from './millTownLayout';
 import { isDrivable, type Lane, type Roundabout } from '../layout';
 import { buildStreet } from '../street3d';
 import { instanced, lambert, baseBox, roofPrism, rng, type Placement } from '../props';
@@ -104,7 +104,8 @@ export function buildMillTown(): BuiltScene {
   // Station Road terraces (west side) and Ringway West.
   terrace(ROADS.station, -1, -120, -30);
   terrace(ROADS.ringwayW, -1, 20, 166);
-  terrace(ROADS.ringwayW, 1, 20, 166);
+  terrace(ROADS.ringwayW, 1, 20, 68);
+  terrace(ROADS.ringwayW, 1, 124, 166);
   terrace(ROADS.ringway, 1, -136, -20);
   terrace(ROADS.ringway, 1, 20, 186);
   terrace(ROADS.ringwayE, 1, 40, 166);
@@ -225,6 +226,21 @@ export function buildMillTown(): BuiltScene {
     m.position.set((o.x0 + o.x1) / 2, 0, (o.z0 + o.z1) / 2);
     root.add(m);
   }
+
+  // St Anne's Primary School on Ringway West, with a playground fence.
+  const school = new THREE.Mesh(box, lambert(0xc27a52));
+  school.scale.set(SCHOOL.x1 - SCHOOL.x0, 6, 26);
+  school.position.set((SCHOOL.x0 + SCHOOL.x1) / 2 + 1, 0, (SCHOOL.z0 + SCHOOL.z1) / 2 + 6);
+  root.add(school);
+  const schoolSign = new THREE.Mesh(new THREE.PlaneGeometry(12, 1.5), new THREE.MeshBasicMaterial({ map: fascia('ST ANNE’S PRIMARY SCHOOL', '#1d3f6e') }));
+  schoolSign.position.set(SCHOOL.x0 + 0.95, 4.6, (SCHOOL.z0 + SCHOOL.z1) / 2 + 6);
+  schoolSign.rotation.y = -Math.PI / 2;
+  root.add(schoolSign);
+  const yard = new THREE.Mesh(new THREE.PlaneGeometry(SCHOOL.x1 - SCHOOL.x0, 14), lambert(0x7b8088));
+  yard.rotation.x = -Math.PI / 2;
+  yard.position.set((SCHOOL.x0 + SCHOOL.x1) / 2, 0.02, SCHOOL.z0 + 7);
+  root.add(yard);
+  root.add(instanced(box, lambert(0x2f8a5f), [{ x: SCHOOL.x0 + 0.2, z: SCHOOL.z0 + 7, sx: 0.08, sy: 1.6, sz: 14 }]));
 
   // Albion Retail Park: a supermarket behind the car park, and parked cars.
   const shop = new THREE.Mesh(box, lambert(0xd9d4c7));

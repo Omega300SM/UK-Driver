@@ -34,7 +34,7 @@ export function ruleChips(nums: number[]): HTMLElement {
   const wrap = h('div');
   for (const n of nums) {
     const r = rule(n);
-    wrap.append(h('a', { class: 'rule-chip', href: r.url, target: '_blank', rel: 'noopener', title: r.summary }, `Rule ${n}`));
+    wrap.append(h('a', { class: 'rule-chip', href: r.url, target: '_blank', rel: 'noopener', title: r.summary }, `Rule ${r.label ?? n}`));
   }
   return wrap;
 }
