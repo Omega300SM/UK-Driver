@@ -210,6 +210,54 @@ export const FAULTS = {
     message: 'We stopped a long way out from the kerb. Pull in close and parallel to the side so others can pass.',
     rules: [239]
   },
+  'rb-observation': {
+    severity: 'minor',
+    category: 'Roundabouts – observation',
+    message: 'We joined the roundabout without a proper look to the right. Traffic from the right has priority, so that’s where your eyes go.',
+    rules: [185]
+  },
+  'rb-pulled-out': {
+    severity: 'serious',
+    category: 'Roundabouts – give way',
+    message: 'We pulled onto the roundabout in front of a car already on it. Give priority to traffic from your right.',
+    rules: [185]
+  },
+  'rb-pulled-out-dangerous': {
+    severity: 'dangerous',
+    category: 'Roundabouts – give way',
+    message: 'We pulled out right in front of a car on the roundabout. That would have been a collision, so I had to step in.',
+    rules: [185]
+  },
+  'rb-signal-approach': {
+    severity: 'minor',
+    category: 'Roundabouts – signals',
+    message: 'The signal on the approach didn’t match where we went. Left for the first exit, right for exits past twelve o’clock, usually none for straight on.',
+    rules: [186]
+  },
+  'rb-signal-exit': {
+    severity: 'minor',
+    category: 'Roundabouts – signals',
+    message: 'No left signal as we left the roundabout. Signal left after passing the exit before the one you want.',
+    rules: [186]
+  },
+  'rb-lane': {
+    severity: 'minor',
+    category: 'Roundabouts – lane choice',
+    message: 'Wrong lane for that exit. Left lane for left or ahead, right lane for right, unless the arrows say otherwise.',
+    rules: [184, 186]
+  },
+  'rb-wrong-way': {
+    severity: 'dangerous',
+    category: 'Roundabouts – direction',
+    message: 'We went the wrong way round the roundabout. Always go round with the island on your right.',
+    rules: [184, 185]
+  },
+  'mini-centre': {
+    severity: 'serious',
+    category: 'Roundabouts – mini-roundabout',
+    message: 'We drove over the painted centre of the mini-roundabout. You MUST pass round the central markings.',
+    rules: [188]
+  },
   'not-secured': {
     severity: 'minor',
     category: 'Control – securing the car',

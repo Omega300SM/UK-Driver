@@ -51,6 +51,36 @@ export type DriveEvent =
       inNoEntry?: boolean;
       /** Well below the limit on a clear road with no reason to be slow. */
       undulySlow?: boolean;
+      /** On or near a roundabout (signals there are judged by rule 186, not "cancel after use"). */
+      onRoundabout?: boolean;
+      /** Going anticlockwise on a roundabout. */
+      rbWrongWay?: boolean;
+      /** On the painted centre of a mini-roundabout (id), if any. */
+      onMiniCentre?: string | null;
+    }
+  | {
+      /** Crossed the give way line onto a roundabout. */
+      type: 'rbEnter';
+      t: number;
+      rb: string;
+      arm: string;
+      signal: SignalState;
+      /** For two-lane entries: which lane the car entered from. */
+      lane: 'left' | 'right' | null;
+      mini: boolean;
+    }
+  | {
+      /** Left a roundabout. turn = angle travelled round (rad): ~π/2 first exit, ~π ahead, ~3π/2 right. */
+      type: 'rbExit';
+      t: number;
+      rb: string;
+      fromArm: string;
+      toArm: string;
+      turn: number;
+      signalAtEntry: SignalState;
+      signalAtExit: SignalState;
+      lane: 'left' | 'right' | null;
+      mini: boolean;
     }
   | {
       /** A completed turn (heading changed by roughly 90°). */
@@ -77,6 +107,8 @@ export type DriveEvent =
       t: number;
       ttc: number;
       junction: string;
+      /** Roundabout conflicts are judged under rule 185. */
+      roundabout?: boolean;
     }
   | {
       type: 'finish';

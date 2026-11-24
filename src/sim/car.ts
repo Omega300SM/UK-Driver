@@ -1,5 +1,5 @@
 import type { Gear } from '../rules/types';
-import { inRect, type Obstacle, type SceneLayout } from '../world/layout';
+import { inRect, isDrivable, type Obstacle, type SceneLayout } from '../world/layout';
 
 export interface CarInput {
   throttle: number; // 0..1
@@ -125,7 +125,7 @@ export class Car {
   private collide(x: number, z: number, h: number, layout: SceneLayout, moving: Obstacle[]): 'kerb' | string | null {
     const pts = this.corners(x, z, h);
     for (const [px, pz] of pts) {
-      if (!layout.drivable.some((r) => inRect(r, px, pz))) return 'kerb';
+      if (!isDrivable(layout, px, pz)) return 'kerb';
     }
     for (const o of moving.length ? [...layout.obstacles, ...moving] : layout.obstacles) {
       for (const [px, pz] of pts) if (inRect(o, px, pz)) return o.kind;

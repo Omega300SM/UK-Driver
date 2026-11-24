@@ -80,7 +80,12 @@ export class RulesEngine {
       case 'tick':
         c.speed = ev.speed;
         c.heading = ev.heading;
-        if (c.signal !== 'off') c.distSinceSignal += ev.dist;
+        if (ev.onRoundabout) {
+          // A roundabout uses the signal; start counting afresh once we leave it.
+          c.distSinceSignal = 0;
+          c.headingAtSignal = ev.heading;
+          c.stoppedSinceSignal = false;
+        } else if (c.signal !== 'off') c.distSinceSignal += ev.dist;
         break;
     }
   }

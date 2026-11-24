@@ -3,7 +3,7 @@ import type { RuleRef } from './schema';
 const HC = 'https://www.gov.uk/guidance/the-highway-code';
 
 /**
- * Highway Code references. Text paraphrased from gov.uk, checked 23 Nov 2026 (Days 1–7).
+ * Highway Code references. Text paraphrased from gov.uk, checked 23–24 Nov 2026 (Days 1–9).
  * Add new rules here and cite them by number from lessons and faults.
  */
 export const RULES: Record<number, RuleRef> = {
@@ -166,6 +166,55 @@ export const RULES: Record<number, RuleRef> = {
     summary:
       'Do not stop or park opposite or within 10 metres of a junction (except in an authorised parking space), on a bend, or near the brow of a hill, among other places.',
     url: `${HC}/waiting-and-parking-238-to-252`
+  },
+  184: {
+    rule: 184,
+    title: 'Approaching a roundabout',
+    summary:
+      'Use Mirrors – Signal – Manoeuvre at all stages, decide early which exit you need, give an appropriate signal, get into the correct lane, and adjust speed and position for the traffic.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  185: {
+    rule: 185,
+    title: 'Reaching a roundabout',
+    summary:
+      'Give priority to traffic approaching from your right unless signs, markings or lights say otherwise; still look right before joining; watch for others already on the roundabout.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  186: {
+    rule: 186,
+    title: 'Roundabout signals and position',
+    summary:
+      'First exit: signal left, approach in the left lane, keep left and keep signalling. Right or full circle: signal right, approach in the right lane, keep right, signal left after passing the exit before yours. Intermediate exits: usually no approach signal; signal left after passing the exit before yours. Give priority to cyclists on the roundabout.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  187: {
+    rule: 187,
+    title: 'Watch out on roundabouts',
+    summary:
+      'Give plenty of room to pedestrians on approach and exit roads, traffic crossing in front of you, vehicles straddling lanes, motorcyclists and long vehicles.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  188: {
+    rule: 188,
+    title: 'Mini-roundabouts',
+    summary:
+      'Approach them like normal roundabouts. All vehicles MUST pass round the central markings except large vehicles physically incapable of doing so. There is less time to signal; avoid U-turns.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  189: {
+    rule: 189,
+    title: 'Double mini-roundabouts',
+    summary:
+      'Treat each roundabout separately and give way to traffic from the right.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  190: {
+    rule: 190,
+    title: 'Multiple roundabouts',
+    summary:
+      'At complex junctions with a series of mini-roundabouts, treat each one separately and follow the normal rules.',
+    url: `${HC}/using-the-road-159-to-203`
   },
   126: {
     rule: 126,
