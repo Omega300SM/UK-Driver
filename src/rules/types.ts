@@ -20,6 +20,8 @@ export type DriveEvent =
       fromParked?: boolean;
     }
   | { type: 'stop'; t: number }
+  /** Started to reverse (from stationary). */
+  | { type: 'reverse'; t: number }
   | { type: 'kerb'; t: number; speed: number }
   | { type: 'collision'; t: number; speed: number; what: string }
   | {
@@ -149,7 +151,21 @@ export type DriveEvent =
       gear: Gear;
       /** Where the car was pulled up, when the lesson asked for a pull-up on the left. */
       pullUp?: { onYellow: 'double' | 'single' | null; nearJunctionM: number | null; onDoubleWhite: boolean; kerbGap: number; onZigzag?: boolean; inBusLane?: boolean };
+      /** For a parking manoeuvre: how well the car finished in the space. */
+      parked?: ParkResult;
     };
+
+export interface ParkResult {
+  kind: 'bay' | 'parallel';
+  /** Whole car within the bay lines / the gap. */
+  inside: boolean;
+  /** Angle from straight (rad). */
+  angleErr: number;
+  /** Parallel: gap from the nearside to the kerb (m). */
+  kerbGap: number | null;
+  /** Bay: reversed in (rule 201: reverse in, drive out). */
+  reversedIn: boolean;
+}
 
 export interface Fault {
   code: string;

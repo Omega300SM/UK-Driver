@@ -3,7 +3,7 @@ import type { RuleRef } from './schema';
 const HC = 'https://www.gov.uk/guidance/the-highway-code';
 
 /**
- * Highway Code references. Text paraphrased from gov.uk, checked 23–24 Nov 2026 (Days 1–11).
+ * Highway Code references. Text paraphrased from gov.uk, checked 23–24 Nov 2026 (Days 1–12).
  * Add new rules here and cite them by number from lessons and faults.
  */
 export const RULES: Record<number, RuleRef> = {
@@ -255,6 +255,31 @@ export const RULES: Record<number, RuleRef> = {
       'Like pelicans but with no flashing amber: the lights run as at traffic lights. Do not go onto the crossing unless you can clear it completely.',
     url: `${HC}/using-the-road-159-to-203`
   },
+  200: {
+    rule: 200,
+    title: 'Choose a safe place to manoeuvre',
+    summary: 'If you need to turn round, wait for a safe place. Try not to reverse or turn round in a busy road: find a quiet side road.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  201: {
+    rule: 201,
+    title: 'Reversing into a road or driveway',
+    summary: 'Do not reverse from a side road into a main road. When using a driveway, reverse in and drive out if you can.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  202: {
+    rule: 202,
+    title: 'Look carefully when reversing',
+    summary:
+      'Before reversing use all your mirrors, check the blind spot behind you and look for pedestrians (especially children), cyclists and obstructions. Reverse slowly, checking all around and looking mainly through the rear window; the front swings out as you turn.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  203: {
+    rule: 203,
+    title: 'Don’t reverse too far',
+    summary: 'You MUST NOT reverse your vehicle further than necessary.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
   184: {
     rule: 184,
     title: 'Approaching a roundabout',
@@ -333,7 +358,8 @@ export const RULES: Record<number, RuleRef> = {
   239: {
     rule: 239,
     title: 'Parking',
-    summary: 'You MUST switch off the engine and apply the handbrake before leaving the vehicle.',
+    summary:
+      'Use off-street car parks or marked bays wherever possible. On the road: don’t park facing against the traffic flow, stop as close as you can to the side, and you MUST switch off the engine and apply the handbrake before leaving the vehicle.',
     url: `${HC}/waiting-and-parking-238-to-252`
   }
 };

@@ -318,6 +318,30 @@ export const FAULTS = {
     message: 'We stopped on the zig-zag lines by the crossing. You MUST NOT stop or park there: it hides people crossing.',
     rules: [191, 240]
   },
+  'reverse-observation': {
+    severity: 'minor',
+    category: 'Reverse parking – observation',
+    message: 'We started reversing without a proper look all round. Mirrors and both shoulders first, then keep looking, mainly out of the back window.',
+    rules: [202]
+  },
+  'park-accuracy': {
+    severity: 'minor',
+    category: 'Reverse parking – accuracy',
+    message: 'We finished over the lines of the space. Take it slowly: a little shunt to straighten up is fine.',
+    rules: [239]
+  },
+  'park-angle': {
+    severity: 'minor',
+    category: 'Reverse parking – control',
+    message: 'We ended up at quite an angle in the space. Straighten up before you stop.',
+    rules: [239]
+  },
+  'park-parallel-kerb': {
+    severity: 'minor',
+    category: 'Reverse parking – accuracy',
+    message: 'We finished a long way out from the kerb. Aim to be close and parallel, about a drain cover’s width away.',
+    rules: [239]
+  },
   'not-secured': {
     severity: 'minor',
     category: 'Control – securing the car',

@@ -37,6 +37,8 @@ export type ScriptStep =
   | { brake: boolean }
   | { wait: number }
   | { drive: Array<[number, number, number]> }
+  /** Reverse through points (x, z, speed m/s; 0 = stop there). Select R first. */
+  | { reverse: Array<[number, number, number]> }
   | { waitGap: Array<[number, number]>; secs?: number }
   | { waitFinishAsked: true }
   | { moveOff: 'left' | 'right' };
@@ -456,6 +458,8 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
         const mk = L.markers.find((x) => x.id === arg)!;
         return inRect(grow(mk, town ? 14 : 8), car.x, car.z);
       }
+      case 'parkedIn':
+        return Math.abs(car.speed) < 0.05 && !!inSpace(arg, 0.4, 0.35)?.inside;
       case 'stoppedAt': {
         const mk = L.markers.find((x) => x.id === arg);
         return !!mk && inRect(mk, car.x, car.z) && Math.abs(car.speed) < 0.05;
@@ -610,6 +614,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
       stillFor = 0;
       movedOffAt = t;
       if (car.speed > 0) emit({ type: 'moveOff', t, fromParked: !town || handbrakeSinceStop || kerbGapAtStop < 0.9 });
+      else emit({ type: 'reverse', t });
     } else if (!stationary) {
       stillFor = Math.abs(car.speed) < 0.05 ? stillFor + dt : 0;
       if (stillFor > 0.25) {
@@ -697,7 +702,32 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
   let kerbGapAtStop = 0;
   const pullUpInfo = () => analyser.pullUpInfo();
 
-  const finishEvent = (): DriveEvent => ({ type: 'finish', t, handbrake: car.handbrake, gear: car.gear, pullUp: lesson.test.pullUp ? pullUpInfo() : undefined });
+  /** All of the car inside a marker (grown by `slack` m) and lined up with it. */
+  const inSpace = (id: string, slack: number, maxAngle: number): { inside: boolean; angleErr: number } | null => {
+    const mk = L.markers.find((m) => m.id === id);
+    if (!mk) return null;
+    const g = grow(mk, slack);
+    const inside = car.corners().every(([px, pz]) => inRect(g, px, pz));
+    const alongZ = mk.z1 - mk.z0 > mk.x1 - mk.x0;
+    const axis = alongZ ? 0 : Math.PI / 2;
+    const angleErr = Math.min(Math.abs(angleDiff(car.heading, axis)), Math.abs(angleDiff(car.heading, axis + Math.PI)));
+    return { inside: inside && angleErr < maxAngle, angleErr };
+  };
+  const parkResult = () => {
+    const kind = lesson.test.manoeuvre;
+    if (!kind) return undefined;
+    const sp = inSpace(lesson.test.finishMarker, 0.15, Math.PI)!; // a little slack for the width of the painted lines
+    const mk = L.markers.find((m) => m.id === lesson.test.finishMarker)!;
+    const towardAisle = (mk.z0 + mk.z1) / 2 < (L.markers.find((m) => m.id === 'car-park')?.z0 ?? 0) + 15 ? 0 : Math.PI;
+    return {
+      kind,
+      inside: sp.inside,
+      angleErr: kind === 'parallel' ? Math.abs(angleDiff(car.heading, 0)) : sp.angleErr,
+      kerbGap: kind === 'parallel' ? pullUpInfo().kerbGap : null,
+      reversedIn: Math.abs(angleDiff(car.heading, towardAisle)) < Math.PI / 2
+    };
+  };
+  const finishEvent = (): DriveEvent => ({ type: 'finish', t, handbrake: car.handbrake, gear: car.gear, pullUp: lesson.test.pullUp ? pullUpInfo() : undefined, parked: parkResult() });
 
   const testLogic = (dt: number) => {
     // Directions are given in order. A direction with an intermediate marker
@@ -729,7 +759,8 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
       }
     }
     const fm = L.markers.find((m) => m.id === lesson.test.finishMarker);
-    const inFinish = finishShown && !!fm && inRect(fm, car.x, car.z) && Math.abs(car.speed) < 0.05;
+    const there = lesson.test.manoeuvre ? !!inSpace(lesson.test.finishMarker, 0.6, 0.45)?.inside : !!fm && inRect(fm, car.x, car.z);
+    const inFinish = finishShown && there && Math.abs(car.speed) < 0.05;
     finishStoppedFor = inFinish ? finishStoppedFor + dt : 0;
     if (finishStoppedFor > 0.8 && finishAskedAt < 0) {
       finishAskedAt = t;
@@ -795,7 +826,14 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     const looking = Math.abs(lookYaw) > 0.05;
 
     const cam = renderer.camera;
-    if (cameraMode === 'cockpit' || looking) {
+    if (car.gear === 'R' && !looking) {
+      // Reversing: a high view over the back of the car, like a parking camera.
+      for (const o of carMesh.upper) o.visible = true;
+      tmpV.set(car.x + fx * 3.2, 8.5, car.z + fz * 3.2);
+      cam.position.lerp(tmpV, 0.2);
+      tmpL.set(car.x - fx * 4.5, 0, car.z - fz * 4.5);
+      cam.lookAt(tmpL);
+    } else if (cameraMode === 'cockpit' || looking) {
       // Driver sits on the right in a UK car.
       tmpV.set(car.x + rx * 0.37 - fx * 0.15, 1.22, car.z + rz * 0.37 - fz * 0.15);
       const yaw = car.heading + lookYaw;
@@ -997,9 +1035,9 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
           return script.at(0.25, nextStep);
         }
         if ('wait' in st) return script.at(st.wait, nextStep);
-        if ('drive' in st) {
+        if ('drive' in st || 'reverse' in st) {
           brake.set(false);
-          script.route(st.drive.map(([x, z, v]) => ({ x, z, v })));
+          script.route('drive' in st ? st.drive.map(([x, z, v]) => ({ x, z, v })) : st.reverse.map(([x, z, v]) => ({ x, z, v, rev: true })));
           const poll = () => (autopilot ? script.at(0.2, poll) : nextStep());
           return script.at(0.2, poll);
         }

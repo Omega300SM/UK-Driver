@@ -30,8 +30,10 @@ describe('lesson content', () => {
       const ids = new Set(L.markers.map((m) => m.id));
       expect(ids.has(lesson.test.finishMarker), 'finish marker').toBe(true);
       for (const s of lesson.guided?.steps ?? []) {
-        const m = /^(zone|stoppedAt|marker)\.(.+)$/.exec(s.await);
+        const m = /^(zone|stoppedAt|marker|parkedIn)\.(.+)$/.exec(s.await);
         if (m) expect(ids.has(m[2]), s.await).toBe(true);
+        const ln = /^line\.(.+)$/.exec(s.await);
+        if (ln) expect(L.stopLines?.some((l) => l.id === ln[1]), s.await).toBe(true);
         const r = /^rb(Enter|Exit)\.(.+)$/.exec(s.await);
         if (r) expect(L.roundabouts?.some((rb) => rb.id === r[2]), s.await).toBe(true);
       }

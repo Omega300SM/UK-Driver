@@ -12,6 +12,7 @@ type Step =
   | { brake: boolean }
   | { wait: number }
   | { drive: Pt[] }
+  | { reverse: Pt[] }
   | { waitGap: Array<[number, number]>; secs?: number }
   | { waitFinishAsked: true }
   | { moveOff: 'left' | 'right' };
@@ -161,6 +162,26 @@ export const ROUTES2: Record<number, Step[]> = {
     { act: 'mirror', arg: 'interior' },
     { drive: [[98.1, -165, 7], [98.1, -186, 6]] },
     ...pullIn([[97.8, -194, 4], [97.35, -199, 0]]),
+    ...secure
+  ]
+  ,
+  // Day 12: into the car park and reverse into bay S7 (on a 5.5 m arc), looking all round first.
+  12: [
+    { moveOff: 'right' },
+    { drive: [[98.1, -62, 5]] },
+    { act: 'signal', arg: 'off' },
+    { act: 'mirror', arg: 'interior' },
+    { act: 'mirror', arg: 'left' },
+    { act: 'signal', arg: 'left' },
+    { drive: [[98.1, -77, 4], [97.8, -82, 3], [95.2, -84.9, 3], [90, -85.5, 3.5]] },
+    { act: 'signal', arg: 'off' },
+    { drive: [[70, -85.5, 4], [60.75, -85.5, 0]] },
+    { brake: true },
+    { act: 'gear', arg: 'R' },
+    { act: 'mirror', arg: 'interior' },
+    { act: 'look', arg: 'left' },
+    { act: 'look', arg: 'right' },
+    { reverse: [[63.5, -86.24, 1.2], [65.51, -88.25, 1.2], [66.25, -91, 1.1], [66.25, -94, 1], [66.25, -97.6, 0]] },
     ...secure
   ]
 };

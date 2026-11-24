@@ -2,6 +2,7 @@ import type { FaultCode } from '../faults';
 import type { Check } from './index';
 import { townChecks } from './town';
 import { streetChecks } from './street';
+import { manoeuvreChecks } from './manoeuvre';
 
 /** Tuning values for roundabout checks (game design; see NEEDS_REVIEW.md). */
 export const RB_TUNING = {
@@ -110,5 +111,5 @@ export function millTownChecks(): Check[] {
     if (c.id !== 'conflict') return c;
     return { id: c.id, onEvent: (ev, ctx) => (ev.type === 'conflict' && ev.roundabout ? null : c.onEvent(ev, ctx)) } as Check;
   });
-  return [...base, rbObservationCheck(), rbSignalCheck(), rbWrongWayCheck(), miniCentreCheck(), rbConflictCheck(), ...streetChecks()];
+  return [...base, rbObservationCheck(), rbSignalCheck(), rbWrongWayCheck(), miniCentreCheck(), rbConflictCheck(), ...streetChecks(), ...manoeuvreChecks()];
 }

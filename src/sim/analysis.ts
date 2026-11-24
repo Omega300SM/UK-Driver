@@ -207,6 +207,9 @@ export class RoadAnalyser {
     if ((L.bends ?? []).some((b) => inRect(b, startF.x, startF.z))) return; // the road bends
     // Roundabouts are judged by their own rules (rule 186), not as turns.
     if (frames.slice(i).some((f) => roundaboutAt(L, f.x, f.z, 6))) return;
+    // Reversing manoeuvres, and moving about inside a car park, aren't road turns.
+    if (frames.slice(i).some((f) => f.speed < -0.1)) return;
+    if ((L.carParks ?? []).some((r) => inRect(r, startF.x, startF.z))) return;
     const turnDh = angleDiff(car.heading, startF.heading);
     emit({ type: 'turn', t, dir: turnDh > 0 ? 'left' : 'right', startT: startF.t, signalAtStart: startF.signal });
   }

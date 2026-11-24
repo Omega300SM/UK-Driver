@@ -44,6 +44,8 @@ export type DiagramId =
   | 'lights-sequence'
   | 'box-junction'
   | 'bus-lane'
+  | 'bay-park'
+  | 'parallel-park'
   | 'none';
 
 /** A road sign drawn from the procedural sign set. */
@@ -77,6 +79,7 @@ export type Trigger =
   | 'brake.held'
   | 'gear.D'
   | 'gear.P'
+  | 'gear.R'
   | 'handbrake.off'
   | 'handbrake.on'
   | 'mirror.interior'
@@ -97,6 +100,7 @@ export type Trigger =
   | `rbEnter.${string}`
   | `rbExit.${string}`
   | `line.${string}`
+  | `parkedIn.${string}`
   | `marker.${string}`
   | `stoppedAt.${string}`;
 
@@ -178,6 +182,8 @@ export interface LessonContent {
     timeLimitS: number;
     /** Judge where they pulled up (yellow lines, near junctions). */
     pullUp?: boolean;
+    /** The finish is a parking manoeuvre into the finish marker (bay or gap). */
+    manoeuvre?: 'bay' | 'parallel';
   } & DriveSetup;
   quiz: QuizQuestion[];
   /** Rules this lesson cites; used in briefing and debrief. */

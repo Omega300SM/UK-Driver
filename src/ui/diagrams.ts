@@ -54,6 +54,10 @@ export function diagram(id: DiagramId): string {
       return boxJunction();
     case 'bus-lane':
       return busLaneDiagram();
+    case 'bay-park':
+      return bayPark();
+    case 'parallel-park':
+      return parallelPark();
     default:
       return `<div style="display:grid;place-items:center;gap:8px">${maggieSvg('proud', 150)}<b>Maggie Hale</b><small class="muted">Ex-DVSA examiner · 31 years</small></div>`;
   }
@@ -400,4 +404,28 @@ function busLaneDiagram(): string {
     'Bus lane: keep out during the times shown on the sign',
     170
   );
+}
+
+function bayPark(): string {
+  const bays = Array.from({ length: 7 }, (_, i) => `<line x1="${40 + i * 40}" y1="110" x2="${40 + i * 40}" y2="168" stroke="#fff" stroke-width="2.5"/>`).join('');
+  return `<svg viewBox="0 0 340 170" role="img" aria-label="Reverse bay parking: stop about a car length past the bay, then reverse in on full lock and straighten up"><rect width="340" height="170" rx="12" fill="#50545a"/>
+    ${bays}<rect x="120" y="110" width="40" height="58" fill="#ffd23f" opacity=".25"/>
+    ${car(100, 132, '#9aa3ab', 90)}${car(180, 140, '#9aa3ab', 90)}
+    ${car(214, 72, '#2f8a5f', 180)}
+    <path d="M196 72 Q140 74 140 134" stroke="#ffd23f" stroke-width="3" fill="none" stroke-dasharray="6 4"/>
+    <polygon points="134,124 146,124 140,136" fill="#ffd23f"/>
+    <text x="12" y="22" font-family="system-ui" font-weight="800" font-size="13" fill="#fff">1. Stop a car length past the bay</text>
+    <text x="12" y="40" font-family="system-ui" font-weight="800" font-size="13" fill="#fff">2. Look all round, reverse on full lock</text>
+    <text x="12" y="58" font-family="system-ui" font-weight="800" font-size="13" fill="#fff">3. Straighten up inside the lines</text></svg>`;
+}
+
+function parallelPark(): string {
+  return `<svg viewBox="0 0 340 170" role="img" aria-label="Parallel parking: stop alongside the car in front of the gap, reverse, steer in, then steer out to straighten close to the kerb"><rect width="340" height="170" rx="12" fill="#78a656"/>
+    <rect x="0" y="28" width="340" height="112" fill="#50545a"/><rect x="0" y="140" width="340" height="10" fill="#b9b5aa"/>
+    ${car(60, 122, '#2e5c8a', 0)}${car(250, 122, '#b8352f', 0)}
+    ${car(254, 84, '#2f8a5f', 0)}
+    <path d="M230 84 Q190 86 170 104 Q150 122 120 122" stroke="#ffd23f" stroke-width="3" fill="none" stroke-dasharray="6 4"/>
+    <polygon points="122,116 122,128 110,122" fill="#ffd23f"/>
+    <text x="12" y="20" font-family="system-ui" font-weight="800" font-size="12.5" fill="#fff">Alongside the red car, a metre out → reverse → steer in → steer out</text>
+    <text x="12" y="164" font-family="system-ui" font-size="10.5" fill="#fff">Finish close to the kerb, straight, facing the traffic flow (rule 239)</text></svg>`;
 }
