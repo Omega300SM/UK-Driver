@@ -64,7 +64,16 @@ export type SignKind =
   | 'warn-giveway-ahead'
   | 'camera'
   | 'no-waiting'
+  | 'warn-roundabout'
+  | 'mini-roundabout'
+  | 'roundabout-map'
   | 'name';
+
+/** Data for an advance direction ("map") sign: the roundabout drawn from the driver's point of view. */
+export interface RoundaboutMap {
+  /** Arms relative to the driver: 0 = ahead, −90 = left, 90 = right (degrees). */
+  exits: Array<{ rel: number; label: string }>;
+}
 
 export interface SignPlacement {
   kind: SignKind;
@@ -75,6 +84,7 @@ export interface SignPlacement {
   value?: number;
   text?: string;
   size?: number;
+  map?: RoundaboutMap;
 }
 
 export interface Junction {
@@ -88,6 +98,46 @@ export interface Junction {
   box: Rect;
   /** Name of the main road, for Maggie's directions. */
   main: string;
+}
+
+/** One arm of a roundabout: a road leaving the centre in direction `angle` (a heading). */
+export interface RoundaboutArm {
+  id: string;
+  angle: number;
+  name: string;
+  /** Lanes entering the roundabout from this arm (1 or 2). */
+  entryLanes?: 1 | 2;
+}
+
+/**
+ * A roundabout. Traffic circulates clockwise as seen from above (in this
+ * world that means heading = θ − π/2 at polar angle θ, island on your right).
+ */
+export interface Roundabout {
+  id: string;
+  name: string;
+  x: number;
+  z: number;
+  /** Raised central island radius (blocked), or the painted circle for a mini. */
+  island: number;
+  /** Outer edge of the circulatory carriageway. */
+  outer: number;
+  /** Mini-roundabout: the centre is painted and you MUST pass round it (rule 188). */
+  mini?: boolean;
+  /** Circulatory lanes (2 = multi-lane / spiral markings). */
+  lanes: 1 | 2;
+  spiral?: boolean;
+  arms: RoundaboutArm[];
+}
+
+/** A directed AI path (lane centre line). Paths join where one ends and another starts. */
+export interface AiPath {
+  id: string;
+  points: Array<[number, number]>;
+  /** Give way before starting this path (roundabout entry). */
+  yieldTo?: string;
+  /** AI cars may be created at the start of this path. */
+  spawn?: boolean;
 }
 
 export interface SceneLayout {
@@ -111,6 +161,39 @@ export interface SceneLayout {
   noEntry?: Array<Rect & { into: number }>;
   /** Corners where the road itself bends (no turn signal needed). */
   bends?: Rect[];
+  roundabouts?: Roundabout[];
+  /** Lane centre lines for path-following AI (scenes without them use straight-lane AI). */
+  aiPaths?: AiPath[];
+}
+
+/** Polar angle of (x, z) about a roundabout centre, in the same convention as headings. */
+export function polarAngle(rb: { x: number; z: number }, x: number, z: number): number {
+  return Math.atan2(x - rb.x, z - rb.z);
+}
+
+export function distTo(rb: { x: number; z: number }, x: number, z: number): number {
+  return Math.hypot(x - rb.x, z - rb.z);
+}
+
+/** Roundabout whose carriageway (or a margin around it) contains the point. */
+export function roundaboutAt(layout: SceneLayout, x: number, z: number, margin = 0): Roundabout | null {
+  for (const rb of layout.roundabouts ?? []) if (distTo(rb, x, z) <= rb.outer + margin) return rb;
+  return null;
+}
+
+/** Can tyres be here? Road rects or roundabout rings, but never on a raised island. */
+export function isDrivable(layout: SceneLayout, x: number, z: number): boolean {
+  for (const rb of layout.roundabouts ?? []) {
+    const d = distTo(rb, x, z);
+    if (!rb.mini && d < rb.island) return false;
+    if (d <= rb.outer) return true;
+  }
+  return layout.drivable.some((r) => inRect(r, x, z));
+}
+
+/** Heading of clockwise circulation at a point on a roundabout. */
+export function circulationHeading(rb: Roundabout, x: number, z: number): number {
+  return polarAngle(rb, x, z) - Math.PI / 2;
 }
 
 export function inRect(r: Rect, x: number, z: number): boolean {
@@ -143,6 +226,7 @@ export function junctionBoxAt(layout: SceneLayout, x: number, z: number): Juncti
  */
 export function wrongSideBy(layout: SceneLayout, x: number, z: number, heading: number): number | null {
   if (junctionBoxAt(layout, x, z)) return null;
+  if (roundaboutAt(layout, x, z, 14)) return null; // approaches and the roundabout itself are judged separately
   for (const lane of layout.lanes) {
     if (!inRect(lane, x, z)) continue;
     const fx = Math.sin(heading);

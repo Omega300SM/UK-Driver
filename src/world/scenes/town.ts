@@ -1,11 +1,9 @@
 import * as THREE from 'three';
 import type { BuiltScene } from './carPark';
 import { TOWN, ROAD_HALF as H, PAVE } from './townLayout';
-import type { Marking, Rect, SignPlacement } from '../layout';
 import { instanced, lambert, baseBox, roofPrism, rng, type Placement } from '../props';
-import { signTexture, fascia } from '../signs';
-import { signAspect } from '../signSvg';
-import { markerMeshes, hintPathFactory } from '../common';
+import { fascia } from '../signs';
+import { markerMeshes, hintPathFactory, flat, addMarkings, signPost } from '../common';
 
 const BRICKS = [0xa4513a, 0x9a4a33, 0xb5634a, 0x8e4433, 0xae5a3e, 0xc0846a];
 const RENDER = [0xefe6d2, 0xd9e3e8, 0xe9d7c3, 0xf2efe6, 0xcfd9c4, 0xe8cfcf];
@@ -259,101 +257,6 @@ export function buildTown(): BuiltScene {
   const mk = markerMeshes(root, L);
   const setHintPath = hintPathFactory(root);
   return { layout: L, root, markers: mk.markers, setMarker: mk.setMarker, setHintPath, update: mk.update };
-}
-
-function flat(r: Rect, mat: THREE.Material, y: number): THREE.Mesh {
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(r.x1 - r.x0, r.z1 - r.z0), mat);
-  m.rotation.x = -Math.PI / 2;
-  m.position.set((r.x0 + r.x1) / 2, y, (r.z0 + r.z1) / 2);
-  return m;
-}
-
-/** Painted lines: white dashes, hazard lines, double whites, give way / stop lines, yellow lines. */
-function addMarkings(root: THREE.Group, ms: Marking[]): void {
-  const white: Placement[] = [];
-  const yellow: Placement[] = [];
-  const Y = 0.012;
-  for (const m of ms) {
-    const len = Math.hypot(m.x1 - m.x0, m.z1 - m.z0);
-    const ry = Math.atan2(m.x1 - m.x0, m.z1 - m.z0);
-    const ux = (m.x1 - m.x0) / len;
-    const uz = (m.z1 - m.z0) / len;
-    // Perpendicular offset vector.
-    const px = uz;
-    const pz = -ux;
-    const dashes = (dash: number, gap: number, width: number, off = 0, out = white) => {
-      for (let s = 0; s < len; s += dash + gap) {
-        const d = Math.min(dash, len - s);
-        const c = s + d / 2;
-        out.push({ x: m.x0 + ux * c + px * off, y: Y, z: m.z0 + uz * c + pz * off, ry, sx: width, sy: 0.01, sz: d });
-      }
-    };
-    const solid = (width: number, off = 0, out = white) => out.push({ x: (m.x0 + m.x1) / 2 + px * off, y: Y, z: (m.z0 + m.z1) / 2 + pz * off, ry, sx: width, sy: 0.01, sz: len });
-    switch (m.kind) {
-      case 'centre':
-        dashes(3, 6, 0.12);
-        break;
-      case 'hazard':
-        dashes(6, 2, 0.14);
-        break;
-      case 'double-solid':
-        solid(0.12, 0.16);
-        solid(0.12, -0.16);
-        break;
-      case 'edge':
-        solid(0.12);
-        break;
-      case 'giveway':
-        dashes(0.6, 0.3, 0.2, 0.18);
-        dashes(0.6, 0.3, 0.2, -0.18);
-        break;
-      case 'stop':
-        solid(0.35);
-        break;
-      case 'double-yellow':
-        solid(0.08, 0.1, yellow);
-        solid(0.08, -0.1, yellow);
-        break;
-      case 'single-yellow':
-        solid(0.1, 0, yellow);
-        break;
-    }
-  }
-  root.add(instanced(baseBox(), new THREE.MeshBasicMaterial({ color: 0xe9e9e2 }), white));
-  root.add(instanced(baseBox(), new THREE.MeshBasicMaterial({ color: 0xf2c230 }), yellow));
-}
-
-function signPost(s: SignPlacement): THREE.Group {
-  const g = new THREE.Group();
-  const size = s.size ?? (s.kind === 'name' ? 0.6 : 0.85);
-  const ar = signAspect(s.kind);
-  const w = size * ar;
-  const h = size;
-  const height = s.kind === 'name' ? 0.9 : 2.1;
-  if (s.kind !== 'name') {
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, height, 6), lambert(0x8d959c));
-    pole.position.y = height / 2;
-    g.add(pole);
-  } else {
-    for (const dx of [-w / 2 + 0.1, w / 2 - 0.1]) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, height, 5), lambert(0x3a3f45));
-      leg.position.set(dx, height / 2, 0);
-      g.add(leg);
-    }
-  }
-  const spec = { kind: s.kind, value: s.value, text: s.text };
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: signTexture(spec), transparent: true, alphaTest: 0.2 }));
-  face.position.y = height + h / 2 - 0.05;
-  face.position.z = 0.03;
-  const back = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshLambertMaterial({ map: signTexture(spec, true), transparent: true, alphaTest: 0.2 }));
-  back.rotation.y = Math.PI;
-  back.position.copy(face.position);
-  back.position.z = 0.0;
-  g.add(face, back);
-  g.position.set(s.x, 0, s.z);
-  // The face's normal must point back at the approaching driver.
-  g.rotation.y = s.faces + Math.PI;
-  return g;
 }
 
 function addParked(root: THREE.Group, box: THREE.BufferGeometry): void {

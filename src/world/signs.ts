@@ -97,7 +97,7 @@ export function speedRoundelSvg(mph: number, size = 56): string {
  * `back` gives a plain grey silhouette for the rear of the sign.
  */
 export function signTexture(spec: SignSpec, back = false): THREE.Texture {
-  const key = `svg-${spec.kind}-${spec.value ?? ''}-${spec.text ?? ''}-${back}`;
+  const key = `svg-${spec.kind}-${spec.value ?? ''}-${spec.text ?? ''}-${spec.map ? JSON.stringify(spec.map) : ''}-${back}`;
   const hit = cache.get(key);
   if (hit) return hit;
   const ar = signAspect(spec.kind);
