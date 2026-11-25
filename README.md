@@ -28,7 +28,7 @@ It's an installable PWA (Vite + TypeScript + Three.js). It plays offline once lo
 | 11 | Traffic lights, box junctions and bus lanes | Bridge Street lights, Canal Side bus lane |
 | 12 | Parking and manoeuvres: reverse bay park, parallel park | Albion Retail Park, Bridge Street |
 | 13 | Vulnerable road users: H1–H3, cyclists, horses, school patrol | The Ringway past St Anne’s school |
-| 14 | **BOSS: Rush Hour** (busy traffic, everything from the week) | A full loop of Mill Town |
+| 14 | **BOSS: Rush Hour** (busy traffic, a 3-minute clock) | Canal Street → two roundabouts → Canal Side → Station Road |
 
 ---
 

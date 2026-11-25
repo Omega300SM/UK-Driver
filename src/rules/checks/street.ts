@@ -117,6 +117,16 @@ export function schoolPullUpCheck(): Check {
   };
 }
 
+/** Timed tests (the Week 2 boss): running out of time is a game rule, not a Highway Code one. */
+export function timeUpCheck(): Check {
+  return {
+    id: 'time-up',
+    onEvent(ev) {
+      return ev.type === 'timeUp' ? 'time-up' : null;
+    }
+  };
+}
+
 export function streetChecks(): Check[] {
-  return [stopLineCheck(), blockCrossingCheck(), boxJunctionCheck(), busLaneCheck(), zigzagPullUpCheck(), passingCheck(), schoolPullUpCheck()];
+  return [timeUpCheck(), stopLineCheck(), blockCrossingCheck(), boxJunctionCheck(), busLaneCheck(), zigzagPullUpCheck(), passingCheck(), schoolPullUpCheck()];
 }

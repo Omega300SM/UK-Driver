@@ -83,7 +83,9 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
 
   const speedV = h('span', { class: 'v' }, '0');
   const limitEl = h('span');
-  const speedo = h('div', { class: 'speedo', 'data-testid': 'speedo' }, speedV, h('span', { class: 'u' }, 'MPH'), limitEl);
+  // Countdown for timed tests (e.g. Rush Hour).
+  const clockEl = h('span', { class: 'clock', 'data-testid': 'clock', 'aria-label': 'Time left' });
+  const speedo = h('div', { class: 'speedo', 'data-testid': 'speedo' }, clockEl, speedV, h('span', { class: 'u' }, 'MPH'), limitEl);
 
   const beltBtn = btn({ class: 'hud-btn', 'data-hud': 'belt', 'data-testid': 'hud-belt' }, '🔗 Belt', () => act.belt());
   const hbBtn = btn({ class: 'hud-btn', 'data-hud': 'handbrake', 'data-testid': 'hud-handbrake' }, 'Handbrake', () => act.handbrake());
@@ -802,6 +804,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
       }
     }
     if (t > lesson.test.timeLimitS) {
+      if (lesson.test.timed && finishAskedAt < 0) emit({ type: 'timeUp', t });
       emit({ type: 'finish', t, handbrake: car.handbrake, gear: car.gear });
       endTest(false);
     }
@@ -904,6 +907,14 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     renderer.render(insetView);
 
     // HUD numbers.
+    const timed = mode === 'test' && !!lesson.test.timed;
+    clockEl.hidden = !timed;
+    if (timed) {
+      const left = Math.max(0, Math.ceil(lesson.test.timeLimitS - t));
+      const txt = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+      if (clockEl.textContent !== txt) clockEl.textContent = txt;
+      clockEl.classList.toggle('low', left <= 30);
+    }
     const v = Math.round(mph(car.speed));
     speedV.textContent = String(v);
     const lim = speedLimitAt(L, car.x, car.z);

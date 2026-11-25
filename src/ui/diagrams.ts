@@ -492,12 +492,12 @@ function rushHourMap(): string {
   const X = (x: number) => Math.round(24 + (210 - x) * 0.8);
   const Y = (z: number) => Math.round(158 - (z + 140) * 0.44);
   const road = (pts: Array<[number, number]>, w = 7) => `<polyline points="${pts.map(([x, z]) => `${X(x)},${Y(z)}`).join(' ')}" stroke="#50545a" stroke-width="${w}" fill="none" stroke-linejoin="round"/>`;
-  const route: Array<[number, number]> = [[-100, 0], [-150, 0], [-150, 180], [0, 180], [0, 0], [200, 0], [200, -130], [0, -130], [0, -86]];
+  const route: Array<[number, number]> = [[0, 120], [0, 0], [200, 0], [200, -130], [0, -130], [0, -86]];
   const label = (x: number, z: number, t: string, anchor = 'start') => `<text x="${X(x)}" y="${Y(z)}" text-anchor="${anchor}" font-family="system-ui" font-weight="800" font-size="9.5" fill="#1d2a1d">${t}</text>`;
-  return `<svg viewBox="0 0 340 170" role="img" aria-label="The Rush Hour route round Mill Town: the Ringway past the school, the mini-roundabout, both big roundabouts, Southway, Canal Side's bus lane, the Bridge Street lights and crossings, then Station Road"><rect width="340" height="170" rx="12" fill="#b9d89a"/>
+  return `<svg viewBox="0 0 340 170" role="img" aria-label="The Rush Hour route through Mill Town: down Canal Street, right at the Mill Road roundabout, left at the Ringway roundabout, Southway, Canal Side's bus lane, the Bridge Street lights and crossings, then Station Road"><rect width="340" height="170" rx="12" fill="#b9d89a"/>
     ${road([[-160, 0], [210, 0]], 9)}${road([[-150, 0], [-150, 180], [200, 180], [200, 0]])}${road([[0, 0], [0, 180]])}${road([[0, 0], [0, -130], [200, -130], [200, 0]])}${road([[100, -130], [100, -60]], 5)}
     <circle cx="${X(0)}" cy="${Y(0)}" r="8" fill="#7fb35a" stroke="#50545a" stroke-width="5"/><circle cx="${X(200)}" cy="${Y(0)}" r="10" fill="#7fb35a" stroke="#50545a" stroke-width="6"/><circle cx="${X(0)}" cy="${Y(180)}" r="4" fill="#fff" stroke="#50545a" stroke-width="3"/>
     <polyline points="${route.map(([x, z]) => `${X(x)},${Y(z)}`).join(' ')}" stroke="#ffd23f" stroke-width="3" fill="none" stroke-dasharray="6 4"/>
-    <circle cx="${X(-100)}" cy="${Y(0)}" r="5" fill="#2f8a5f"/>${label(-100, -14, 'Start', 'middle')}
-    ${label(-140, 100, 'School', 'end')}${label(-6, 120, 'Canal St')}${label(100, -122, 'Canal Side', 'middle')}${label(194, -60, 'Southway')}${label(-6, -100, 'Finish')}</svg>`;
+    <circle cx="${X(0)}" cy="${Y(120)}" r="5" fill="#2f8a5f"/>${label(-6, 124, 'Start')}
+    ${label(-6, 70, 'Canal St')}${label(100, -122, 'Canal Side', 'middle')}${label(194, -60, 'Southway')}${label(-6, -100, 'Finish')}</svg>`;
 }

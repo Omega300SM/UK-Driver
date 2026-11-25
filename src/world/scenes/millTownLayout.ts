@@ -190,6 +190,20 @@ const drivable: Rect[] = [
   CAR_PARK,
   CAR_PARK_ENTRANCE,
   ...filletsX(-85, 100 - H, -1, 4), // rounded kerbs at the car park entrance
+  // Rounded kerbs where the big roundabouts' arms meet the circular carriageway.
+  ...[R1, R2].flatMap((rb) =>
+    rb.arms
+      .filter((arm) => !(rb === R2 && arm.id === 'W')) // R2's west arm has its own flare
+      .flatMap((arm) => {
+        const d = rb.outer - 1;
+        if (arm.id === 'N' || arm.id === 'S') {
+          const dir = arm.id === 'N' ? 1 : -1;
+          return filletsZ(rb.x, rb.z + dir * d, dir as 1 | -1, 4);
+        }
+        const dir = arm.id === 'E' ? 1 : -1;
+        return filletsX(rb.z, rb.x + dir * d, dir as 1 | -1, 4);
+      })
+  ),
   // Junction mouths and bends get rounded kerbs.
   ...filletsZ(-150, H, 1), // Ringway (west) meets Mill Road
   ...filletsX(-130, 200 - H, -1), // Canal Side meets Southway
@@ -804,6 +818,7 @@ export const MT_STARTS = {
   southwayNorth: (z: number) => ({ x: 200 + H - 1.15, z, heading: N }),
   southwaySouth: (z: number) => ({ x: 200 - H + 1.15, z, heading: S }),
   bridgeSouth: (z: number) => ({ x: 100 - H + 1.15, z, heading: S }),
+  canalSouth: (z: number) => ({ x: -H + 1.15, z, heading: S }),
   canalNorth: (z: number) => ({ x: H - 1.15, z, heading: N })
 };
 export const MT_HEADINGS = { E, W, N, S };

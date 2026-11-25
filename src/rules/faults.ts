@@ -384,6 +384,12 @@ export const FAULTS = {
     message: 'We stopped on the School Keep Clear markings. Don’t stop or park near a school entrance: children need to see and be seen.',
     rules: [243]
   },
+  'time-up': {
+    severity: 'serious',
+    category: 'Timed challenge',
+    message: 'The clock ran out before we reached the finish. Steady progress is the trick: no dawdling on clear roads, and no rushing junctions either.',
+    rules: []
+  },
   'not-secured': {
     severity: 'minor',
     category: 'Control – securing the car',

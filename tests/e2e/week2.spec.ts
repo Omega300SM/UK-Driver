@@ -45,6 +45,7 @@ for (const day of Object.keys(ROUTES2).map(Number)) {
     while (Date.now() - t0 < 540_000) {
       const st = await page.evaluate(() => ({
         over: !!document.querySelector('[data-testid=test-over]'),
+        t: Math.round((window as any).__drive?.t ?? 0),
         x: (window as any).__drive?.car.x,
         z: (window as any).__drive?.car.z,
         f: (window as any).__drive?.rules.faults.map((f: { code: string; t: number }) => `${f.code}@${Math.round(f.t)}`)

@@ -194,6 +194,8 @@ export interface LessonContent {
     timeLimitS: number;
     /** Judge where they pulled up (yellow lines, near junctions). */
     pullUp?: boolean;
+    /** Show a countdown; running out of time before the finish is a fault. */
+    timed?: boolean;
     /** The finish is a parking manoeuvre into the finish marker (bay or gap). */
     manoeuvre?: 'bay' | 'parallel';
   } & DriveSetup;

@@ -1528,3 +1528,20 @@ body.needs-landscape #rotate {
     height: 44px;
   }
 }
+
+/* Countdown for timed tests. */
+.speedo .clock {
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.14);
+  margin-right: 2px;
+}
+.speedo .clock[hidden] {
+  display: none;
+}
+.speedo .clock.low {
+  background: #d4202b;
+}

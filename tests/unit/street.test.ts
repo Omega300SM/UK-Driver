@@ -158,6 +158,11 @@ describe('street rules', () => {
     expect(faults(ev({ kind: 'informal', aspect: null, pedWaiting: true }))).toEqual(['junction-ped-waiting']);
   });
 
+  it('timed tests: running out of time is a serious fault', () => {
+    expect(faults({ type: 'timeUp', t: 180 })).toEqual(['time-up']);
+    expect(FAULTS['time-up'].severity).toBe('serious');
+  });
+
   it('every new fault cites rules that are in the rule references', () => {
     for (const code of Object.keys(FAULTS) as Array<keyof typeof FAULTS>) {
       for (const n of FAULTS[code].rules) expect(RULES[n], `${code} → rule ${n}`).toBeDefined();

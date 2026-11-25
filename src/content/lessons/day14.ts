@@ -1,26 +1,18 @@
 import type { LessonContent } from '../schema';
-import { MT_STARTS, MT_HEADINGS, R1, R2, M1, rbArc, route } from '../../world/scenes/millTownLayout';
+import { MT_STARTS, R1, R2, rbArc, route } from '../../world/scenes/millTownLayout';
 
 /**
- * Day 14 — BOSS: Rush Hour. One long, marked drive round Mill Town in busy
- * traffic, using everything from Week 2: roundabouts (big, two-lane and
- * mini), lane choice, a school patrol and a cyclist, a give way turn, a bus
+ * Day 14 — BOSS: Rush Hour. A short, intense, marked drive through Mill Town
+ * in busy traffic, against a 3-minute clock: a right exit at the Mill Road
+ * roundabout, lane choice at the Ringway roundabout, a left turn past a bus
  * lane, the Bridge Street lights and box junction, a zebra and a pelican.
  */
 const r2Left = rbArc(R2, 'W', 'S');
 const ROUTE = route(
   [
-    [-110, 1.9],
-    [-143, 1.9],
-    [-146.5, 2.6],
-    [-148.1, 6],
-    [-148.1, 170],
-    [-147.6, 174.6],
-    [-145, 177.6],
-    [-12, 178.1]
+    [-1.9, 115],
+    [-1.9, 30]
   ],
-  rbArc(M1, 'W', 'S'),
-  [[-1.9, 30]],
   rbArc(R1, 'N', 'E'),
   [
     [30, -1.9],
@@ -41,48 +33,42 @@ const ROUTE = route(
   ]
 );
 
-/** The cyclist on the Ringway, released as you turn in. */
-const BIKE = { when: { x0: -154, x1: -146, z0: 13, z1: 22 }, from: { x: -147.0, z: 30, heading: MT_HEADINGS.N }, speed: 3.5, kind: 'bike' as const };
 
 export const day14: LessonContent = {
   day: 14,
   world: 2,
   title: 'BOSS: Rush Hour',
-  subtitle: 'A full drive round Mill Town at its busiest, marked like the real thing',
+  subtitle: 'Three minutes through Mill Town at its busiest, marked like the real thing',
   sceneId: 'millTown',
   checks: 'millTown',
   boss: true,
   badge: 'roundabout-royalty',
-  rules: [185, 186, 188, 902, 163, 210, 141, 174, 175, 195, 196],
+  rules: [185, 186, 141, 174, 175, 195, 196],
 
   briefing: [
     {
       title: 'Rush Hour',
-      say: 'End of week two, and it’s rush hour in Mill Town. Busy roads, people everywhere, and a school run. No guided drive, no hints. I’ll give you directions and mark you like an examiner. Breathe, take your time, and drive the way you’ve practised all week.',
-      points: ['No guided drive, no hints', 'Busy traffic and pedestrians', 'Marked like the real test'],
+      say: 'End of week two, and it’s rush hour in Mill Town. Busy roads and people everywhere. No guided drive, no hints, and you’ve got three minutes to get to Station Road. I’ll give you directions and mark you like an examiner. Three minutes is plenty if you drive steadily: never rush a junction to beat the clock.',
+      points: ['No guided drive, no hints', 'Three minutes on the clock', 'Busy traffic and pedestrians'],
       diagram: 'rush-hour'
     },
     {
       title: 'What’s on the route',
-      say: 'Up the Ringway past St Anne’s, with a cyclist and the crossing patrol. Round the mini-roundabout, then right at the Mill Road roundabout and left at the Ringway roundabout, in the correct lane. Down Southway, onto Canal Side past the bus lane, through the Bridge Street lights and their box, over a zebra and a pelican, and pull up on Station Road.',
-      points: ['Three roundabouts: lanes and signals', 'Cyclist, school patrol and crossings', 'Bus lane, lights and the box junction'],
+      say: 'Down Canal Street, right at the Mill Road roundabout, then left at the Ringway roundabout, in the correct lane. Down Southway, onto Canal Side past the bus lane, through the Bridge Street lights and their box, over a zebra and a pelican, and pull up on Station Road.',
+      points: ['Two roundabouts: lanes and signals', 'Bus lane, lights and the box junction', 'A zebra and a pelican crossing'],
       diagram: 'none',
-      signs: [{ kind: 'mini-roundabout' }, { kind: 'warn-school' }, { kind: 'bus-lane' }, { kind: 'warn-signals' }]
+      signs: [{ kind: 'warn-roundabout' }, { kind: 'bus-lane' }, { kind: 'warn-signals' }, { kind: 'warn-pedestrians' }]
     }
   ],
 
   test: {
-    intro: 'This is the Rush Hour test. We’re on Mill Road. When you’re ready, move off and follow the road ahead.',
-    start: MT_STARTS.millWest(-100),
+    intro: 'This is the Rush Hour test, and the clock is running: three minutes. We’re on Canal Street. Move off when it’s safe.',
+    start: MT_STARTS.canalSouth(120),
     parked: true,
     traffic: 'busy',
-    scripted: [BIKE],
     hint: ROUTE,
     directions: [
-      { at: { x0: -125, x1: -105, z0: 0, z1: 4 }, say: 'Take the next road on the left, the Ringway.' },
-      { at: { x0: -154, x1: -146, z0: 44, z1: 70 }, say: 'Follow the road ahead, past the school.' },
-      { at: { x0: -154, x1: -146, z0: 140, z1: 170 }, say: 'Follow the road round to the right. At the mini-roundabout, take the first exit, Canal Street.' },
-      { at: { x0: -4, x1: 4, z0: 70, z1: 140 }, say: 'At the roundabout, turn right: the third exit, towards the Ringway roundabout.' },
+      { at: { x0: -4, x1: 0, z0: 70, z1: 112 }, say: 'At the roundabout, turn right: the third exit, towards the Ringway roundabout.' },
       { at: { x0: 40, x1: 120, z0: -4, z1: 4 }, say: 'At the next roundabout, take the first exit, Southway. Get into the left-hand lane.' },
       { at: { x0: 194, x1: 204, z0: -90, z1: -40 }, say: 'Take the next road on the left, Canal Side.' },
       { at: { x0: 130, x1: 186, z0: -130, z1: -122 }, say: 'At the traffic lights, go straight on, then follow the road round to the right.' },
@@ -90,7 +76,8 @@ export const day14: LessonContent = {
     ],
     finishMarker: 'ST2',
     finishSay: 'Thank you. Secure the car, please. That’s the end of your test.',
-    timeLimitS: 1200,
+    timeLimitS: 180,
+    timed: true,
     pullUp: true
   },
 

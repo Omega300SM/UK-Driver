@@ -20,6 +20,8 @@ export type DriveEvent =
       fromParked?: boolean;
     }
   | { type: 'stop'; t: number }
+  /** A timed test ran out of time before the finish. */
+  | { type: 'timeUp'; t: number }
   /** Started to reverse (from stationary). */
   | { type: 'reverse'; t: number }
   | { type: 'kerb'; t: number; speed: number }
