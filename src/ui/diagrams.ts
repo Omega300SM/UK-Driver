@@ -369,10 +369,10 @@ function signalCrossings(): string {
 
 function lightsSequence(): string {
   const steps: Array<[string[], string, string]> = [
-    [['#ff2a1a', '', ''], 'Red', 'Stop behind the line'],
+    [['#ff2a1a', '', ''], 'Red', 'Stop at the line'],
     [['#ff2a1a', '#ffa514', ''], 'Red + amber', 'Still stop'],
     [['', '', '#2bff6a'], 'Green', 'Go, if clear'],
-    [['', '#ffa514', ''], 'Amber', 'Stop, unless too close']
+    [['', '#ffa514', ''], 'Amber', 'Stop if you can']
   ];
   return `<svg viewBox="0 0 340 170" role="img" aria-label="Traffic light sequence: red, red and amber, green, amber, then red again"><rect width="340" height="170" rx="12" fill="#1f6f4a"/>
     ${steps
@@ -463,9 +463,9 @@ function passingDistances(): string {
     <line x1="64" y1="108" x2="64" y2="128" stroke="#ffd23f" stroke-width="2"/><text x="20" y="122" font-family="system-ui" font-weight="800" font-size="12" fill="#ffd23f">1.5 m</text>
     ${horse(250, 132)}${car(250, 90, '#2f8a5f', 0)}
     <line x1="222" y1="102" x2="222" y2="126" stroke="#ffd23f" stroke-width="2"/><text x="178" y="118" font-family="system-ui" font-weight="800" font-size="12" fill="#ffd23f">2 m</text>
-    <text x="12" y="20" font-family="system-ui" font-weight="800" font-size="12.5" fill="#fff">Cyclists: 1.5 m+ at up to 30 mph</text>
-    <text x="190" y="20" font-family="system-ui" font-weight="800" font-size="12.5" fill="#fff">Horses: 2 m+, under 10 mph</text>
-    <text x="12" y="164" font-family="system-ui" font-size="10.5" fill="#fff">Not enough room? Wait behind (rules 163, 212, 215).</text>`,
+    <text x="12" y="20" font-family="system-ui" font-weight="800" font-size="12.5" fill="#fff">Cyclists: 1.5 m or more</text>
+    <text x="328" y="20" text-anchor="end" font-family="system-ui" font-weight="800" font-size="12.5" fill="#fff">Horses: 2 m, under 10 mph</text>
+    <text x="12" y="164" font-family="system-ui" font-size="10.5" fill="#fff">Cyclists: more room above 30 mph. No room? Wait behind.</text>`,
     'Passing distances: at least 1.5 metres for cyclists at up to 30 mph, and at least 2 metres at under 10 mph for horse riders',
     170
   );
@@ -487,16 +487,17 @@ function h2Junction(): string {
 }
 
 function rushHourMap(): string {
-  // Mill Town in plan: x −160…210 and z −140…185 mapped onto the card.
-  const X = (x: number) => Math.round(24 + (x + 160) * 0.8);
+  // Mill Town in plan: x −160…210 and z −140…185 mapped onto the card. In this world +x is on
+  // your left when you face north (+z), so x runs right-to-left on the map to match what you see.
+  const X = (x: number) => Math.round(24 + (210 - x) * 0.8);
   const Y = (z: number) => Math.round(158 - (z + 140) * 0.44);
   const road = (pts: Array<[number, number]>, w = 7) => `<polyline points="${pts.map(([x, z]) => `${X(x)},${Y(z)}`).join(' ')}" stroke="#50545a" stroke-width="${w}" fill="none" stroke-linejoin="round"/>`;
   const route: Array<[number, number]> = [[-100, 0], [-150, 0], [-150, 180], [0, 180], [0, 0], [200, 0], [200, -130], [0, -130], [0, -86]];
-  const label = (x: number, z: number, t: string) => `<text x="${X(x)}" y="${Y(z)}" font-family="system-ui" font-weight="800" font-size="9.5" fill="#1d2a1d">${t}</text>`;
+  const label = (x: number, z: number, t: string, anchor = 'start') => `<text x="${X(x)}" y="${Y(z)}" text-anchor="${anchor}" font-family="system-ui" font-weight="800" font-size="9.5" fill="#1d2a1d">${t}</text>`;
   return `<svg viewBox="0 0 340 170" role="img" aria-label="The Rush Hour route round Mill Town: the Ringway past the school, the mini-roundabout, both big roundabouts, Southway, Canal Side's bus lane, the Bridge Street lights and crossings, then Station Road"><rect width="340" height="170" rx="12" fill="#b9d89a"/>
     ${road([[-160, 0], [210, 0]], 9)}${road([[-150, 0], [-150, 180], [200, 180], [200, 0]])}${road([[0, 0], [0, 180]])}${road([[0, 0], [0, -130], [200, -130], [200, 0]])}${road([[100, -130], [100, -60]], 5)}
     <circle cx="${X(0)}" cy="${Y(0)}" r="8" fill="#7fb35a" stroke="#50545a" stroke-width="5"/><circle cx="${X(200)}" cy="${Y(0)}" r="10" fill="#7fb35a" stroke="#50545a" stroke-width="6"/><circle cx="${X(0)}" cy="${Y(180)}" r="4" fill="#fff" stroke="#50545a" stroke-width="3"/>
     <polyline points="${route.map(([x, z]) => `${X(x)},${Y(z)}`).join(' ')}" stroke="#ffd23f" stroke-width="3" fill="none" stroke-dasharray="6 4"/>
-    <circle cx="${X(-100)}" cy="${Y(0)}" r="5" fill="#2f8a5f"/>${label(-110, -16, 'Start')}
-    ${label(-148, 100, 'School')}${label(10, 120, 'Canal St')}${label(60, -122, 'Canal Side')}${label(206, -60, 'Southway')}${label(8, -100, 'Finish')}</svg>`;
+    <circle cx="${X(-100)}" cy="${Y(0)}" r="5" fill="#2f8a5f"/>${label(-100, -14, 'Start', 'middle')}
+    ${label(-140, 100, 'School', 'end')}${label(-6, 120, 'Canal St')}${label(100, -122, 'Canal Side', 'middle')}${label(194, -60, 'Southway')}${label(-6, -100, 'Finish')}</svg>`;
 }

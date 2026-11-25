@@ -418,6 +418,10 @@ p {
   gap: 14px;
   grid-template-columns: 1fr;
   align-content: start;
+  /* Rows keep their full height (a tall slide scrolls rather than squashing the diagram). */
+  grid-auto-rows: max-content;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 @media (orientation: landscape) {
   .slide {
@@ -1176,7 +1180,12 @@ body.needs-landscape #rotate {
   .brief-main {
     display: grid;
     grid-template-columns: 1.35fr 1fr;
+    /* One row the height of the screen: the slide and Maggie's bubble each scroll if they're long. */
+    grid-template-rows: minmax(0, 1fr);
     align-items: start;
+  }
+  .brief-main > * {
+    max-height: 100%;
   }
   .brief-main .bubble {
     font-size: 15px;

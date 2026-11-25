@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { BuiltScene } from './carPark';
-import { MILL_TOWN, ROADS, R1, R2, M1, MAGIC, MAGIC_CENTRE, MAGIC_HALF_SIZE, R2_FLARE, H, CAR_PARK, SCHOOL } from './millTownLayout';
+import { MILL_TOWN, ROADS, R1, R2, M1, MAGIC, MAGIC_CENTRE, MAGIC_HALF_SIZE, R2_FLARE, H, CAR_PARK, SCHOOL, CORNER_PADS } from './millTownLayout';
 import { isDrivable, type Lane, type Roundabout } from '../layout';
 import { buildStreet } from '../street3d';
 import { instanced, lambert, baseBox, roofPrism, rng, type Placement } from '../props';
@@ -36,6 +36,9 @@ export function buildMillTown(): BuiltScene {
   const tarmac = lambert(0x4e5257);
   for (const d of L.drivable) root.add(flat(d, tarmac, 0));
   root.add(instanced(box, lambert(0xb5b1a6), L.pavements.map((p) => ({ x: (p.x0 + p.x1) / 2, z: (p.z0 + p.z1) / 2, sx: p.x1 - p.x0, sy: 0.13, sz: p.z1 - p.z0 }))));
+  // Pavement-coloured pads under the rounded kerbs at junction corners (the tarmac fillets sit on top).
+  const padMat = lambert(0xb5b1a6);
+  for (const c of CORNER_PADS) root.add(flat(c, padMat, -0.008));
 
   // Roundabouts: tarmac discs, raised planted islands, painted minis.
   for (const rb of L.roundabouts ?? []) addRoundabout(root, rb);

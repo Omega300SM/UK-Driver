@@ -120,9 +120,17 @@ export const ROADS = {
 };
 
 const CORNER_R = 5;
+/** Corner squares under each set of kerb fillets, drawn in pavement colour so the corners don't show grass. */
+export const CORNER_PADS: Rect[] = [];
 /** Stepped quarter-circle fillets at the corners where a side road (along z) meets an edge. */
-function filletsZ(centreX: number, edge: number, dir: 1 | -1, r = CORNER_R, steps = 5, sides: 'both' | 'low' | 'high' = 'both'): Rect[] {
+function filletsZ(centreX: number, edge: number, dir: 1 | -1, r = CORNER_R, steps = 5, sides: 'both' | 'low' | 'high' = 'both', pad = true): Rect[] {
   const out: Rect[] = [];
+  if (pad) {
+    const z0 = Math.min(edge, edge + dir * r);
+    const z1 = Math.max(edge, edge + dir * r);
+    if (sides !== 'high') CORNER_PADS.push({ x0: centreX - H - r, x1: centreX - H, z0, z1 });
+    if (sides !== 'low') CORNER_PADS.push({ x0: centreX + H, x1: centreX + H + r, z0, z1 });
+  }
   for (let i = 0; i < steps; i++) {
     const d0 = (i * r) / steps;
     const d1 = ((i + 1) * r) / steps;
@@ -137,7 +145,14 @@ function filletsZ(centreX: number, edge: number, dir: 1 | -1, r = CORNER_R, step
 }
 /** Same for a side road along x meeting an edge at x = edge. */
 function filletsX(centreZ: number, edge: number, dir: 1 | -1, r = CORNER_R, steps = 5, sides: 'both' | 'low' | 'high' = 'both'): Rect[] {
-  return filletsZ(centreZ, edge, dir, r, steps, sides).map((q) => ({ x0: q.z0, x1: q.z1, z0: q.x0, z1: q.x1 }));
+  const n = CORNER_PADS.length;
+  const out = filletsZ(centreZ, edge, dir, r, steps, sides);
+  // filletsZ worked in swapped axes: swap its pads back too.
+  for (let i = n; i < CORNER_PADS.length; i++) {
+    const q = CORNER_PADS[i];
+    CORNER_PADS[i] = { x0: q.z0, x1: q.z1, z0: q.x0, z1: q.x1 };
+  }
+  return out.map((q) => ({ x0: q.z0, x1: q.z1, z0: q.x0, z1: q.x1 }));
 }
 const bend = (x: number, z: number): Rect => ({ x0: x - H, x1: x + H, z0: z - H, z1: z + H });
 
