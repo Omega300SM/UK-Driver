@@ -70,6 +70,11 @@ export class RulesEngine {
       case 'moveOff':
         c.moving = true;
         break;
+      case 'laneChange':
+        // The signal has done its job; count afresh from here.
+        c.distSinceSignal = 0;
+        c.headingAtSignal = c.heading;
+        break;
       case 'stop':
         c.moving = false;
         if (c.signal !== 'off') {

@@ -10,7 +10,7 @@ export default defineConfig({
   use: { baseURL: 'http://localhost:4173', trace: 'off' },
   webServer: { command: 'npm run build && npm run preview', port: 4173, reuseExistingServer: true, timeout: 180_000 },
   projects: [
-    { name: 'iphone-portrait', testIgnore: /(hud|voice|week1|week2)\.spec/, use: { ...iphone, browserName: 'chromium' } },
+    { name: 'iphone-portrait', testIgnore: /(hud|voice|week1|week2|week3)\.spec/, use: { ...iphone, browserName: 'chromium' } },
     {
       name: 'iphone-landscape',
       use: { ...iphone, browserName: 'chromium', viewport: { width: iphone.viewport.height, height: iphone.viewport.width } }

@@ -6,7 +6,7 @@ import { goHome, next } from '../nav';
 import { stageLabel, toast } from './common';
 import { Renderer } from '../../engine/renderer';
 import { buildScene } from '../../world/scenes';
-import { inRect, speedLimitAt, wrongSideBy as wrongSideAt, laneAt, junctionBoxAt, grow, roundaboutAt } from '../../world/layout';
+import { inRect, speedLimitAt, wrongSideBy as wrongSideAt, laneAt, junctionBoxAt, grow, roundaboutAt, carriagewayAt } from '../../world/layout';
 import { buildPlayerCar, setLamp } from '../../world/playerCar';
 import { speedRoundelSvg } from '../../world/signs';
 import { signSvg } from '../../world/signSvg';
@@ -35,13 +35,15 @@ type DriveMode = Extract<Stage, 'guided' | 'free' | 'test'>;
 
 /** A step for the scripted driver used by e2e tests and screenshots. */
 export type ScriptStep =
-  | { act: 'belt' | 'handbrake' | 'mirror' | 'look' | 'signal' | 'gear'; arg?: string }
+  | { act: 'belt' | 'handbrake' | 'mirror' | 'look' | 'signal' | 'gear' | 'lights' | 'wipers'; arg?: string }
   | { brake: boolean }
   | { wait: number }
   | { drive: Array<[number, number, number]> }
   /** Reverse through points (x, z, speed m/s; 0 = stop there). Select R first. */
   | { reverse: Array<[number, number, number]> }
   | { waitGap: Array<[number, number]>; secs?: number }
+  /** Keep going in this lane until the lane at x (dual carriageway or motorway) has a safe gap alongside. */
+  | { waitLane: number }
   | { waitFinishAsked: true }
   | { moveOff: 'left' | 'right' };
 
@@ -623,13 +625,21 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
       if (ap) {
         // Scripted driver keeps a safe distance from AI cars ahead (two-second-ish gap).
         const [afx, afz] = car.forward;
+        const wetGap = conds.state().wet;
+        const look = Math.max(40, Math.abs(car.speed) * (wetGap ? 4.4 : 2.3) + 20);
         let gap = Infinity;
+        // ...and doesn't pass slower traffic on its left on a dual carriageway or motorway (rule 268).
+        let rightLaneV = Infinity;
+        const onCw = !!carriagewayAt(L, car.x, car.z);
         for (const c of traffic.cars) {
           const dx = c.x - car.x;
           const dz = c.z - car.z;
           const along = dx * afx + dz * afz;
-          const across = Math.abs(dx * afz - dz * afx);
-          if (along > 0 && along < 40 && across < 2.2) gap = Math.min(gap, along - 4.2);
+          const side = dx * afz - dz * afx; // + is to our left
+          const across = Math.abs(side);
+          if (along > 0 && along < look && across < 2.2) gap = Math.min(gap, along - 4.2);
+          const sameWay = Math.sin(c.heading) * afx + Math.cos(c.heading) * afz > 0.7;
+          if (onCw && sameWay && side < -2.2 && side > -6 && along > -3 && along < 70) rightLaneV = Math.min(rightLaneV, c.speed);
         }
         // ...and stops at red lights and for people on crossings, like a careful driver.
         if (street) {
@@ -652,6 +662,10 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
         if (gap < safe) {
           ap.throttle = 0;
           ap.brake = Math.max(ap.brake, gap < 2.5 ? 0.6 : Math.min(0.45, (safe - gap) * 0.12));
+        }
+        if (car.speed > rightLaneV - 0.5) {
+          ap.throttle = 0;
+          ap.brake = Math.max(ap.brake, Math.min(0.35, (car.speed - rightLaneV + 0.5) * 0.15));
         }
         throttle = ap.throttle;
         brakeValue = ap.brake;
@@ -1128,6 +1142,8 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
           else if (st.act === 'look') act.shoulder((st.arg ?? 'right') as Side);
           else if (st.act === 'signal') act.signal((st.arg ?? 'off') as Side | 'off');
           else if (st.act === 'gear') act.gear((st.arg ?? 'D') as Gear);
+          else if (st.act === 'lights') act.lights();
+          else if (st.act === 'wipers') act.wipers();
           return script.at(0.25, nextStep);
         }
         if ('brake' in st) {
@@ -1144,8 +1160,25 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
         if ('waitGap' in st) {
           const need = st.secs ?? 6;
           const poll = () => {
-            const gap = Math.min(...st.waitGap.map(([x, z]) => traffic.timeToReach(x, z)));
+            // Cars queued behind us can't be the traffic we're waiting for.
+            const [fx, fz] = car.forward;
+            const behind = (c: { x: number; z: number }) => (c.x - car.x) * fx + (c.z - car.z) * fz < -2;
+            const gap = Math.min(...st.waitGap.map(([x, z]) => traffic.timeToReach(x, z, behind)));
             return gap > need ? nextStep() : script.at(0.2, poll);
+          };
+          return poll();
+        }
+        if ('waitLane' in st) {
+          const poll = () => {
+            const [fx, fz] = car.forward;
+            const busy = traffic.cars.some((c) => {
+              const along = (c.x - car.x) * fx + (c.z - car.z) * fz;
+              return Math.abs(c.x - st.waitLane) < 1.6 && along > -(12 + Math.max(0, c.speed - car.speed) * 3) && along < 18;
+            });
+            if (!busy) return nextStep();
+            // Hold the lane, easing off so the traffic alongside can go by.
+            script.route([{ x: car.x, z: car.z, v: car.speed }, { x: car.x + fx * 60, z: car.z + fz * 60, v: Math.max(12, car.speed - 3) }].slice(1));
+            return script.at(0.2, poll);
           };
           return poll();
         }

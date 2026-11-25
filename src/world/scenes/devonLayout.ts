@@ -101,23 +101,44 @@ export const COMBE: Rect[] = [
   { x0: 620 - TH, x1: 620 + TH, z0: 420 - TH, z1: 900 + TH },
   { x0: CX + AH - 0.5, x1: 620 + TH, z0: 900 - TH, z1: 900 + TH }
 ];
-/** Passing places: [x0, x1, z0, z1]. */
+/** Passing places (28 m long, 3 m wide), with tapered ends so you can get in and out. */
+const pp = (side: 'x' | 'z', a0: number, edge: number, dir: 1 | -1): Rect =>
+  side === 'z'
+    ? { x0: Math.min(edge, edge + dir * 3), x1: Math.max(edge, edge + dir * 3), z0: a0, z1: a0 + 28 }
+    : { z0: Math.min(edge, edge + dir * 3), z1: Math.max(edge, edge + dir * 3), x0: a0, x1: a0 + 28 };
 const PASSING: Rect[] = [
   // Section A (northbound, left = +x)
-  { x0: 800 + TH, x1: 800 + TH + 3, z0: 60, z1: 80 },
-  { x0: 800 - TH - 3, x1: 800 - TH, z0: 160, z1: 180 },
-  { x0: 800 + TH, x1: 800 + TH + 3, z0: 260, z1: 280 },
-  { x0: 800 - TH - 3, x1: 800 - TH, z0: 350, z1: 370 },
+  pp('z', 56, 800 + TH, 1),
+  pp('z', 156, 800 - TH, -1),
+  pp('z', 256, 800 + TH, 1),
+  pp('z', 346, 800 - TH, -1),
   // Section B (westbound, left = +z)
-  { x0: 690, x1: 710, z0: 420 + TH, z1: 420 + TH + 3 },
+  pp('x', 686, 420 + TH, 1),
   // Section C (northbound)
-  { x0: 620 + TH, x1: 620 + TH + 3, z0: 520, z1: 540 },
-  { x0: 620 - TH - 3, x1: 620 - TH, z0: 630, z1: 650 },
-  { x0: 620 + TH, x1: 620 + TH + 3, z0: 740, z1: 760 },
+  pp('z', 516, 620 + TH, 1),
+  pp('z', 626, 620 - TH, -1),
+  pp('z', 736, 620 + TH, 1),
   // Section D (westbound)
-  { x0: 520, x1: 540, z0: 900 + TH, z1: 900 + TH + 3 },
-  { x0: 450, x1: 470, z0: 900 - TH - 3, z1: 900 - TH }
+  pp('x', 516, 900 + TH, 1),
+  pp('x', 446, 900 - TH, -1)
 ];
+/** The tapers at each end of a passing place (a 1.5 m wedge, 6 m long). */
+const TAPERS: Rect[] = PASSING.flatMap((p) => {
+  const alongZ = p.z1 - p.z0 > p.x1 - p.x0;
+  if (alongZ) {
+    const inner = p.x0 === 800 + TH || p.x0 === 620 + TH ? p.x0 : p.x1 - 1.5;
+    const x0 = inner === p.x0 ? p.x0 : p.x1 - 1.5;
+    return [
+      { x0, x1: x0 + 1.5, z0: p.z0 - 6, z1: p.z0 },
+      { x0, x1: x0 + 1.5, z0: p.z1, z1: p.z1 + 6 }
+    ];
+  }
+  const z0 = p.z0 === 420 + TH || p.z0 === 900 + TH ? p.z0 : p.z1 - 1.5;
+  return [
+    { x0: p.x0 - 6, x1: p.x0, z0, z1: z0 + 1.5 },
+    { x0: p.x1, x1: p.x1 + 6, z0, z1: z0 + 1.5 }
+  ];
+});
 export const PASSING_PLACES = PASSING;
 
 // ---- One-way carriageways ------------------------------------------------------
@@ -156,7 +177,7 @@ const VAN: Obstacle = { kind: 'van', x0: NB2 + 0.6, x1: NB3 - 0.6, z0: Z.van - 2
 const LAYBYS: Rect[] = [
   { x0: CX + AH, x1: CX + AH + 3, z0: 1150, z1: 1210 },
   { x0: CX + AH, x1: CX + AH + 3, z0: 2150, z1: 2210 },
-  { x0: NB2, x1: NB2 + 3, z0: 3300, z1: 3360 }
+  { x0: NB2, x1: NB2 + 3, z0: 3400, z1: 3460 }
 ];
 
 const bend = (x: number, z: number, h: number): Rect => ({ x0: x - h, x1: x + h, z0: z - h, z1: z + h });
@@ -165,6 +186,7 @@ const drivable: Rect[] = [
   ...Object.values(ROADS),
   ...COMBE,
   ...PASSING,
+  ...TAPERS,
   ...CARRIAGEWAYS,
   ...HARD_SHOULDERS,
   EMERGENCY_AREA,
@@ -174,19 +196,36 @@ const drivable: Rect[] = [
   { x0: CX + AH, x1: CX + AH + 1.5, z0: 1210, z1: 1220 },
   { x0: CX + AH, x1: CX + AH + 1.5, z0: 2140, z1: 2150 },
   { x0: CX + AH, x1: CX + AH + 1.5, z0: 2210, z1: 2220 },
-  { x0: NB2, x1: NB2 + 1.5, z0: 3290, z1: 3300 },
-  { x0: NB2, x1: NB2 + 1.5, z0: 3360, z1: 3370 },
+  { x0: NB2, x1: NB2 + 1.5, z0: 3390, z1: 3400 },
+  { x0: NB2, x1: NB2 + 1.5, z0: 3460, z1: 3470 },
+  // The diverge taper into the junction 3 exit lane.
+  { x0: NB3, x1: NB3 + 1, z0: Z.j3Exit - 90, z1: Z.j3Exit - 60 },
+  { x0: NB3, x1: NB3 + 2, z0: Z.j3Exit - 60, z1: Z.j3Exit - 30 },
+  { x0: NB3, x1: NB3 + 3, z0: Z.j3Exit - 30, z1: Z.j3Exit },
   // Corners where slip roads meet their link roads (left turns off / on).
   bend(NB2 + LW / 2, Z.j1, AH),
   bend(NB2 + LW / 2, Z.j2Link, AH),
   bend(NB2 + LW / 2, Z.j2Entry, AH),
   bend(NB3 + LW / 2, Z.seaview, AH),
+  // Flared kerbs where the A386 and the local roads meet Okement Cross.
+  { x0: CX - AH - 4, x1: CX + AH + 4, z0: Z.rbt - 24 - 5, z1: Z.rbt - 21 },
+  { x0: CX + 21, x1: CX + 24 + 5, z0: Z.rbt - AH - 4, z1: Z.rbt + AH + 4 },
+  { x0: CX - 24 - 5, x1: CX - 21, z0: Z.rbt - AH - 4, z1: Z.rbt + AH + 4 },
+  { x0: SB0, x1: NB2, z0: Z.rbt + 21, z1: Z.dualStart + 4 },
   // Inside corners of those bends, a little rounded.
-  { x0: NB2 + LW, x1: NB2 + LW + 3, z0: Z.j1 + AH, z1: Z.j1 + AH + 3 },
-  { x0: NB2 + LW, x1: NB2 + LW + 3, z0: Z.j2Entry + AH, z1: Z.j2Entry + AH + 3 },
-  { x0: NB2 + LW, x1: NB2 + LW + 3, z0: Z.j2Link - AH - 3, z1: Z.j2Link - AH },
-  { x0: NB3 + LW, x1: NB3 + LW + 3, z0: Z.seaview - AH - 3, z1: Z.seaview - AH },
-  // Combe Lane corners, a little wider on the inside so you can see round them.
+  { x0: NB2 + LW, x1: NB2 + LW + 6, z0: Z.j1 + AH, z1: Z.j1 + AH + 6 },
+  { x0: NB2 + LW, x1: NB2 + LW + 3, z0: Z.j1 + AH + 6, z1: Z.j1 + AH + 10 },
+  { x0: NB2 + LW, x1: NB2 + LW + 6, z0: Z.j2Entry + AH, z1: Z.j2Entry + AH + 6 },
+  { x0: NB2 + LW, x1: NB2 + LW + 3, z0: Z.j2Entry + AH + 6, z1: Z.j2Entry + AH + 10 },
+  { x0: NB2 + LW, x1: NB2 + LW + 6, z0: Z.j2Link - AH - 6, z1: Z.j2Link - AH },
+  { x0: NB2 + LW, x1: NB2 + LW + 3, z0: Z.j2Link - AH - 10, z1: Z.j2Link - AH - 6 },
+  { x0: NB3 + LW, x1: NB3 + LW + 6, z0: Z.seaview - AH - 6, z1: Z.seaview - AH },
+  { x0: NB3 + LW, x1: NB3 + LW + 3, z0: Z.seaview - AH - 10, z1: Z.seaview - AH - 6 },
+  // Combe Lane corners: wider than the lane (a car can't turn a right angle in 3.6 m) …
+  bend(800, 420, 5),
+  bend(620, 420, 5),
+  bend(620, 900, 5),
+  // … and a little more on the inside.
   { x0: 800 - TH - 2, x1: 800 - TH, z0: 418.2 - 2, z1: 418.2 },
   { x0: 620 + TH, x1: 620 + TH + 2, z0: 421.8, z1: 421.8 + 2 },
   { x0: 620 - TH - 2, x1: 620 - TH, z0: 898.2 - 2, z1: 898.2 },
@@ -333,11 +372,11 @@ const signs: SignPlacement[] = [
 // ---- Markers and zones -----------------------------------------------------------------------
 const markers: Marker[] = [
   { id: 'LB1', label: 'The lay-by, on the left', x0: CX + AH + 0.3, x1: CX + AH + 3, z0: 1158, z1: 1202 },
-  { id: 'LB2', label: 'The lay-by, on the left', x0: NB2 + 0.3, x1: NB2 + 3, z0: 3308, z1: 3352 },
+  { id: 'LB2', label: 'The lay-by, on the left', x0: NB2 + 0.3, x1: NB2 + 3, z0: 3408, z1: 3452 },
   { id: 'LB3', label: 'The lay-by, on the left', x0: CX + AH + 0.3, x1: CX + AH + 3, z0: 2158, z1: 2202 },
   { id: 'fog1', label: '', x0: CX - AH, x1: CX + AH, z0: 1500, z1: 1900 },
   { id: 'es-zone', label: '', x0: CX, x1: CX + AH, z0: 1960, z1: 2030 },
-  { id: 'dual-lane1', label: '', x0: NB0 + LW, x1: NB2, z0: 2480, z1: 3290 },
+  { id: 'dual-lane1', label: '', x0: NB0 + LW, x1: NB2, z0: 2480, z1: 3390 },
   { id: 'lane2-smart', label: '', x0: NB0 + LW, x1: NB2, z0: 6700, z1: Z.closed0 },
   { id: 'smart-end', label: '', x0: NB0, x1: NB3, z0: Z.closed1, z1: Z.closed1 + 90 },
   { id: 'J2L', label: 'The B3215, on the left', x0: 600, x1: 640, z0: Z.j2Link - AH, z1: Z.j2Link - AH + 2.8 },
@@ -352,7 +391,7 @@ const markers: Marker[] = [
   { id: 'a386-rain', label: '', x0: CX, x1: CX + AH, z0: 1300, z1: 2300 },
   { id: 'rbt-approach', label: '', x0: CX, x1: CX + AH, z0: 2330, z1: 2424 },
   { id: 'dual', label: '', x0: NB0, x1: NB2, z0: 2480, z1: 3050 },
-  { id: 'dual-lane2', label: '', x0: NB0, x1: NB0 + LW, z0: 2480, z1: 3290 },
+  { id: 'dual-lane2', label: '', x0: NB0, x1: NB0 + LW, z0: 2480, z1: 3390 },
   { id: 'j1-slip', label: '', x0: NB2, x1: NB2 + LW, z0: Z.j1 + 5, z1: Z.j1End },
   { id: 'm5-lane1', label: '', x0: NB0 + LW, x1: NB2, z0: Z.j1End, z1: Z.j2Exit },
   { id: 'm5-lane2', label: '', x0: NB0, x1: NB0 + LW, z0: Z.j1End, z1: Z.j2Exit },

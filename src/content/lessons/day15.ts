@@ -28,7 +28,7 @@ export const COMBE_ROUTE: Array<[number, number]> = [
 /** A car coming the other way down Combe Lane (guided drive: meet it near the passing place at z 270). */
 const ONCOMING_A: ScriptedCar = { when: { x0: 790, x1: 810, z0: 120, z1: 160 }, from: { x: 800, z: 390, heading: DV_HEADINGS.S }, speed: 6.5, colour: 0xb8352f };
 /** Test drive: a van comes down the second straight. */
-const ONCOMING_C: ScriptedCar = { when: { x0: 610, x1: 630, z0: 440, z1: 470 }, from: { x: 620, z: 690, heading: DV_HEADINGS.S }, speed: 6.5, colour: 0xe8e4da };
+const ONCOMING_C: ScriptedCar = { when: { x0: 610, x1: 630, z0: 478, z1: 500 }, from: { x: 620, z: 770, heading: DV_HEADINGS.S }, speed: 6.5, colour: 0xe8e4da };
 
 export const day15: LessonContent = {
   day: 15,

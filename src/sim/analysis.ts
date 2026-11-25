@@ -3,7 +3,7 @@ import type { Traffic } from './traffic';
 import type { Recorder } from '../rules/recorder';
 import type { StreetControl } from './street';
 import { ROAD_USER_SIZE } from './traffic';
-import { carriagewayAt, laneNumber } from '../world/layout';
+import { carriagewayAt, laneNumber, laneCentre } from '../world/layout';
 import type { LightsState } from '../world/conditions';
 import type { DriveEvent, SignalState } from '../rules/types';
 import { mph } from '../rules/types';
@@ -78,7 +78,12 @@ export class RoadAnalyser {
       (L.stopLines ?? []).some((l) => Math.hypot(l.x - car.x, l.z - car.z) < 35);
     const nearParked = L.obstacles.some((ob) => (ob.kind === 'car' || ob.kind === 'van') && Math.hypot((ob.x0 + ob.x1) / 2 - car.x, (ob.z0 + ob.z1) / 2 - car.z) < 30);
     if (passingObstruction || nearParked) clearAhead = false;
-    const undulySlow = v > 1 && v < limit * 0.4 && clearAhead && !nearJunction && !o.pullingUp && t - o.movedOffAt > 12;
+    // Only on proper roads: single-track lanes are meant to be driven slowly (rule 154).
+    const cwHere = carriagewayAt(L, car.x, car.z);
+    // Slip roads are for changing speed, so slow there isn't hesitation (rules 259, 273).
+    const onRoad = !!laneAt(L, car.x, car.z) || (!!cwHere && cwHere.kind !== 'slip');
+    const slowZone = (L.slowZones ?? []).some((r) => inRect(r, car.x, car.z));
+    const undulySlow = v > 1 && v < limit * 0.4 && clearAhead && !nearJunction && !o.pullingUp && t - o.movedOffAt > 12 && onRoad && !slowZone;
 
     // Roundabouts: direction of travel and mini-roundabout centres.
     let rbWrongWay = false;
@@ -227,8 +232,9 @@ export class RoadAnalyser {
   }
 
   // ---------- Fast roads: lanes, gaps, motorway rules, lights (Week 3) ----------
-  private lastCw: { id: string; lane: number; kind: string } | null = null;
+  private lastCw: { id: string; lane: number; kind: string; x: number } | null = null;
   private passingRight = new Map<number, number>();
+  private undertaken = new Set<number>();
   private reversedOnMotorway = false;
   fastRoads(t: number, lights: LightsState, cond: { dark: boolean; wet: boolean; poorVisibility: boolean }, emit: Emit) {
     const { L, car, traffic } = this;
@@ -262,13 +268,18 @@ export class RoadAnalyser {
     let leftLaneClear = false;
     if (cw && laneNo && laneNo > 1) {
       leftLaneClear = !rel.some((o) => o.same && o.across < -1.9 && o.across > -1.9 - cw.laneWidth * 1.2 && o.along > -25 && o.along < 140);
+      // A lane closed by a red X ahead isn't somewhere to move back to (rule 258).
+      const lx = laneCentre(cw, laneNo - 1);
+      for (let d = -20; d < 260 && leftLaneClear; d += 20) if ((L.closedLanes ?? []).some((r) => inRect(r, lx, car.z + fz * d))) leftLaneClear = false;
     }
 
     // Lane changes and merges.
     if (cw && laneNo && v > 3) {
-      const now = { id: cw.id, lane: laneNo, kind: cw.kind };
+      const now = { id: cw.id, lane: laneNo, kind: cw.kind, x: laneCentre(cw, laneNo) };
       const prev = this.lastCw;
-      if (prev && (prev.id !== now.id || prev.lane !== now.lane)) {
+      // A real lane change moves you sideways; where a slip road simply becomes lane 1 (or the
+      // dual carriageway becomes the motorway) the lane carries on and nothing has changed.
+      if (prev && (prev.id !== now.id || prev.lane !== now.lane) && Math.abs(now.x - prev.x) > 1) {
         const sideways = prev.id === now.id ? (now.lane > prev.lane ? 'right' : 'left') : cw.kind === 'slip' ? 'left' : 'right';
         emit({ type: 'laneChange', t, dir: sideways, from: `${prev.id}:${prev.lane}`, to: `${now.id}:${now.lane}` });
         if (prev.kind === 'slip' && cw.kind !== 'slip') {
@@ -296,7 +307,11 @@ export class RoadAnalyser {
       for (const o of rel) {
         if (!o.same || o.across < 1.9 || o.across > 1.9 + cw.laneWidth * 1.3 || o.c.speed < 12) continue;
         const was = this.passingRight.get(o.c.id);
-        if (was !== undefined && was < 0 && o.along < -o.len / 2 - 2 && v > o.c.speed + 1.5) emit({ type: 'undertake', t });
+        // It was ahead of us and now it's behind: we went past it on its left.
+        if (was !== undefined && was > 0 && o.along < 0 && v > o.c.speed + 1.5 && !this.undertaken.has(o.c.id)) {
+          this.undertaken.add(o.c.id);
+          emit({ type: 'undertake', t });
+        }
         this.passingRight.set(o.c.id, o.along);
       }
     }

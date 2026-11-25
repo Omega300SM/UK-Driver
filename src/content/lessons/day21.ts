@@ -31,7 +31,7 @@ const ROUTE: Array<[number, number]> = [
 ];
 
 /** The van coming down Combe Lane. */
-const VAN: ScriptedCar = { when: { x0: 610, x1: 630, z0: 440, z1: 470 }, from: { x: 620, z: 690, heading: DV_HEADINGS.S }, speed: 6.5, colour: 0xe8e4da };
+const VAN: ScriptedCar = { when: { x0: 610, x1: 630, z0: 478, z1: 500 }, from: { x: 620, z: 770, heading: DV_HEADINGS.S }, speed: 6.5, colour: 0xe8e4da };
 
 export const day21: LessonContent = {
   day: 21,

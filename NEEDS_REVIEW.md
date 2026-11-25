@@ -54,6 +54,22 @@ Items to check with a human (ideally an ADI) before release. Rule text was check
 | 239–240 | Parking: close to the side, not against the traffic flow; MUST NOT stop on a crossing or its zig-zags | Pull-up and parking checks |
 | Light signals section | RED AND AMBER also means ‘Stop’ | Lights diagram, Day 11 |
 
+## Verified against gov.uk (Week 3, Days 15–21), 25 November 2026
+| Rule | Topic | Used for |
+|------|-------|----------|
+| 113–116 | Headlights at night on unlit roads; MUST NOT dazzle (dip for oncoming and when following); dazzled: slow or stop; hazard lights only when stationary (or briefly on motorways) | Day 20 |
+| 124 | National speed limits: 60 single carriageway, 70 dual carriageway and motorway (cars) | Days 15–21 |
+| 126, 227 | Two-second gap on fast roads, at least doubled in the wet | Following checks, Days 16–21 |
+| 133 | Changing lanes: mirrors, glance if needed, signal, move | Lane-change checks |
+| 137 | Keep to the left lane on a two-lane dual carriageway | Lane-hogging check, Day 17 |
+| 154–156 | Country lanes: stop within the distance you can see; passing places (left: pull in; right: wait opposite); don’t park in them | Days 15, 20, 21 |
+| 162–168 | Overtaking: is it safe, mirrors/signal, large vehicles, where not to, being overtaken | Day 17 |
+| 226, 235 | Fog lights and headlights when visibility is seriously reduced; driving in fog | Day 16 |
+| 253, 255–259 | Motorway: who may not use it; smart motorway signals, red X (MUST NOT use a closed lane), joining from a slip road (give priority, match speed) | Days 18, 19, 21 |
+| 261, 263–264 | Red-ringed limits are mandatory; lane discipline, keep left unless overtaking | Days 18, 19, 21 |
+| 267–271, 273, 275 | Overtaking on motorways (not on the left except in queues), hard shoulder, emergency areas, leaving (signal, countdown markers), breakdowns | Days 18, 19 |
+| Typical stopping distances | 12, 23, 36, 53, 73, 96 m at 20–70 mph | Day 16 emergency stop and diagram |
+
 ## Game-design choices that are *not* Highway Code rules
 - **Fault severities.** The game decides which mistakes are minor, serious or dangerous. These mirror the spirit of DVSA marking but are simplified. DVSA examiners judge each fault in context. An ADI should review the table in `src/rules/faults.ts`.
 - **"Mirror check within 4 seconds before signalling/moving off."** The Highway Code says "in good time". 4 s is a game tuning value.
@@ -80,8 +96,11 @@ Items to check with a human (ideally an ADI) before release. Rule text was check
 - **Manoeuvres.** Bays are 2.5 × 4.8 m and the parallel gap is about 9.6 m (2.3 car lengths), a little generous for a game. Reverse parking is judged at the end (inside the lines, angle). Rule 201’s “reverse in, drive out” is taught, not enforced.
 - **Cyclists and horse riders** ride steadily near the kerb and never wobble or turn. The passing check measures the closest side-to-side gap while you are alongside.
 
+- **Week 3 severities (in `FAST_TUNING`).** Following under 2 s (4 s in the wet) for 3 s: minor; under 0.9 s: serious. Lane change without a mirror check in the last 6 s, or without a signal: minor. Crossing a slip road’s solid line: minor; joining into a gap under 1.6 s of the car behind: serious; joining below 40 mph: minor. Sitting in lane 2 or 3 for 15 s with lane 1 clear: minor (lane hogging). Undertaking a moving vehicle: minor. Hard shoulder for 2 s, a red-X lane for 0.5 s, reversing on a motorway: serious. The wrong way down a carriageway: dangerous. Stopping on a motorway for 3 s: serious. More than 5 mph over a bend’s advisory speed: minor. No headlights in the dark or in fog for 4 s: serious; main beam dazzling someone for 2.5 s: minor.
+- **Week 3 world.** Lanes and motorway lanes are 3.65 m; the single-track lane is 3.6 m with 28 m passing places. Slip roads, tapers and corners are simplified rectangles. Variable limits are fixed per gantry (60 then 50), not reacting to traffic. Lorries cruise at about three-quarters of the limit; AI keeps about a 1.9 s gap and never tailgates or undertakes.
+- **Wet grip.** Braking grip is 60% in the wet; the emergency-stop report doubles the typical figure in the rain, as the Highway Code says stopping distances “at least double”.
+
 ## Still to verify (future days)
-- Rule 126 two-second rule wording (Day 16) — fetched; doubled in wet, up to ten times on ice.
 - Mock theory test format (50 questions, 57 minutes, 43 to pass) and hazard perception (14 clips, 44/75) — confirm on gov.uk before Day 27.
 - New-driver rules (6 points within 2 years), ULEZ/CAZ details — confirm before Day 24.
 - 20 mph defaults differ in Wales; English 20 mph zones are set by local councils — keep England-only wording.

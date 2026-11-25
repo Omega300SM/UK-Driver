@@ -476,32 +476,42 @@ export class Traffic {
 
   /** AI cars as obstacles for the player's collision checks. */
   obstacles(): Obstacle[] {
-    return this.cars.map((c) => {
+    const out: Obstacle[] = [];
+    for (const c of this.cars) {
+      const { len, wid } = sizeOf(c);
+      const fx = Math.sin(c.heading);
+      const fz = Math.cos(c.heading);
       if (c.path) {
-        const fx = Math.sin(c.heading);
-        const fz = Math.cos(c.heading);
-        const { len, wid } = sizeOf(c);
-        const ex = Math.abs(fx) * (len / 2) + Math.abs(fz) * (wid / 2);
-        const ez = Math.abs(fz) * (len / 2) + Math.abs(fx) * (wid / 2);
-        return { kind: 'car' as const, x0: c.x - ex * 0.9, x1: c.x + ex * 0.9, z0: c.z - ez * 0.9, z1: c.z + ez * 0.9 };
+        // A chain of small boxes along the vehicle, so a long lorry going round a corner
+        // isn't one huge axis-aligned box.
+        const n = Math.max(1, Math.round(len / wid));
+        const step = len / n;
+        const h = (wid / 2) * 0.95;
+        for (let k = 0; k < n; k++) {
+          const along = -len / 2 + step * (k + 0.5);
+          const x = c.x + fx * along;
+          const z = c.z + fz * along;
+          out.push({ kind: 'car', x0: x - h, x1: x + h, z0: z - h, z1: z + h });
+        }
+        continue;
       }
-      const alongX = Math.abs(Math.sin(c.heading)) > 0.7;
-      const size = ROAD_USER_SIZE[c.kind ?? 'car'];
-      const hl = size.len / 2;
-      const hw = size.wid / 2;
-      return alongX
-        ? { kind: 'car', x0: c.x - hl, x1: c.x + hl, z0: c.z - hw, z1: c.z + hw }
-        : { kind: 'car', x0: c.x - hw, x1: c.x + hw, z0: c.z - hl, z1: c.z + hl };
-    });
+      const alongX = Math.abs(fx) > 0.7;
+      const hl = len / 2;
+      const hw = wid / 2;
+      out.push(alongX ? { kind: 'car', x0: c.x - hl, x1: c.x + hl, z0: c.z - hw, z1: c.z + hw } : { kind: 'car', x0: c.x - hw, x1: c.x + hw, z0: c.z - hl, z1: c.z + hl });
+    }
+    return out;
   }
+
 
   /**
    * Seconds until the nearest AI car in the lane through (x, z) would reach it
    * at its normal speed. Infinity if nothing is coming.
    */
-  timeToReach(x: number, z: number): number {
+  timeToReach(x: number, z: number, ignore?: (c: AiCar) => boolean): number {
     let best = Infinity;
     for (const c of this.cars) {
+      if (ignore?.(c)) continue;
       if (c.path) {
         best = Math.min(best, this.pathTimeTo(c, x, z));
         continue;

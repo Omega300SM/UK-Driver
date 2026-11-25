@@ -148,7 +148,10 @@ export function buildDevon(): BuiltScene {
     hills.push({ x: -700 - r() * 300, z, sx: 260 + r() * 200, sy: 60 + r() * 70, sz: 260 + r() * 200, color: r() < 0.5 ? 0x7d7a56 : 0x6b7f4a });
     hills.push({ x: 1600 + r() * 300, z, sx: 300 + r() * 200, sy: 35 + r() * 40, sz: 300 + r() * 200, color: 0x6b8f4a });
   }
-  root.add(instanced(new THREE.ConeGeometry(0.5, 1, 6).translate(0, 0.5, 0), lambert(0xffffff, { flatShading: true, fog: false }), hills));
+  // Distant hills ignore the fog on a clear day (they'd vanish), but take it in rain and fog (see conditions.ts).
+  const hillMat = lambert(0xffffff, { flatShading: true, fog: false });
+  hillMat.userData.distant = true;
+  root.add(instanced(new THREE.ConeGeometry(0.5, 1, 6).translate(0, 0.5, 0), hillMat, hills));
   const tors: Placement[] = [];
   for (let i = 0; i < 6; i++) tors.push({ x: -520 - r() * 120, y: 50 + r() * 30, z: 200 + i * 900 + r() * 200, sx: 18, sy: 14, sz: 14, color: 0x8b8a82 });
   root.add(instanced(box, lambert(0xffffff), tors));

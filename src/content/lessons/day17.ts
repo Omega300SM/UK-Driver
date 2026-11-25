@@ -11,13 +11,13 @@ export const DUAL_ROUTE: Array<[number, number]> = [
   [L1, 2420],
   ...rbPath(OKEMENT, 'S', 'N'),
   [nbLane(1), 2520],
-  [nbLane(1), 3280],
-  [NB2 + 1.2, 3305],
-  [NB2 + 1.4, 3330]
+  [nbLane(1), 3380],
+  [NB2 + 1.2, 3405],
+  [NB2 + 1.4, 3430]
 ];
 
 /** A slow lorry in lane 1, released as you leave the roundabout. */
-export const LORRY: ScriptedCar = { when: { x0: CX - 30, x1: CX + 30, z0: 2440, z1: 2490 }, from: { x: nbLane(1), z: 2600, heading: DV_HEADINGS.N }, speed: 21, kind: 'lorry', colour: 0x1d4f9c };
+export const LORRY: ScriptedCar = { when: { x0: CX - 30, x1: CX + 30, z0: 2440, z1: 2490 }, from: { x: nbLane(1), z: 2530, heading: DV_HEADINGS.N }, speed: 18, kind: 'lorry', colour: 0x1d4f9c };
 
 export const day17: LessonContent = {
   day: 17,
@@ -98,7 +98,7 @@ export const day17: LessonContent = {
     directions: [
       { at: { x0: CX, x1: CX + AH, z0: 2250, z1: 2330 }, say: 'At the roundabout, follow the road ahead: second exit, the A30.' },
       { at: { x0: 401, x1: 409, z0: 2490, z1: 2560 }, say: 'Follow the dual carriageway. Overtake the lorry when it’s safe.' },
-      { at: { x0: 401, x1: 409, z0: 3120, z1: 3240 }, say: 'Pull into the lay-by on the left, at the marker.', marker: 'LB2' }
+      { at: { x0: 401, x1: 409, z0: 3150, z1: 3330 }, say: 'Pull into the lay-by on the left, at the marker.', marker: 'LB2' }
     ],
     finishMarker: 'LB2',
     finishSay: 'Thank you. Secure the car, please.',

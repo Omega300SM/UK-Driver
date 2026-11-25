@@ -30,6 +30,17 @@ It's an installable PWA (Vite + TypeScript + Three.js). It plays offline once lo
 | 13 | Vulnerable road users: H1–H3, cyclists, horses, school patrol | The Ringway past St Anne’s school |
 | 14 | **BOSS: Rush Hour** (busy traffic, a 3-minute clock) | Canal Street → two roundabouts → Canal Side → Station Road |
 
+### Week 3: The Devon Run
+| Day | Lesson | Where |
+|---|---|---|
+| 15 | Country lanes and passing places | Combe Lane, Ashcombe to the A386 |
+| 16 | Stopping distances and weather (rain, fog, emergency stop) | The A386 over the moor |
+| 17 | Dual carriageways and overtaking | Okement Cross roundabout and the A30 |
+| 18 | Motorways I: joining, lane discipline, leaving | The M5, junction 1 to junction 2 |
+| 19 | Motorways II: smart motorways, gantries, red X, emergency areas | The M5, junction 2 to Seaview |
+| 20 | Night driving: dipped and main beam, dazzle | Combe Lane and the A386 after dark |
+| 21 | **BOSS: Motorway Run to the Coast** (in the rain) | Ashcombe to Seaview: lane, A road, dual carriageway, motorway |
+
 ---
 
 ## Quick start
@@ -45,7 +56,7 @@ npm run dev          # http://localhost:5173 (also on your LAN, for a phone on t
 | `npm run build` | Type-check and build to `dist/` (with service worker) |
 | `npm run preview` | Serve the production build on port 4173 |
 | `npm test` | Unit tests (Vitest): rules engine, scoring, unlocks, save/load, car model, content checks |
-| `npm run e2e` | Playwright on iPhone 13 emulation, portrait and landscape (builds first). Add `-- --trace off` to skip tracing. Includes a scripted "careful learner" drive of every Week 1 and Week 2 test route, which must finish with zero faults |
+| `npm run e2e` | Playwright on iPhone 13 emulation, portrait and landscape (builds first). Add `-- --trace off` to skip tracing. Includes a scripted "careful learner" drive of every Week 1, 2 and 3 test route, which must finish with zero faults |
 | `node scripts/make-icons.mjs` | Re-render the PNG app icons from `public/icons/icon.svg` |
 
 Add `?debug` to the URL for an FPS counter. `?e2e` exposes test hooks (`window.__DE`, `window.__drive`).
@@ -90,6 +101,7 @@ src/
 - **Rules engine.** The sim and HUD emit events (`mirror`, `shoulder`, `signal`, `moveOff`, `stop`, `kerb`, `collision`, `tick`, …). Each check in `src/rules/checks/` is a small object that turns events into faults. In guided and free drives the engine runs in *coach* mode: Maggie comments, but nothing is scored.
 - **Scoring.** More than 15 driving faults, or any serious or dangerous fault, fails the test drive. A dangerous fault stops the drive. Lesson % = 60% test + 25% quiz + 15% guided drive. You need **80% and a passed test** to unlock the next day. All weights live in `src/scoring/lessonScore.ts`.
 - **Daily gate.** Day *n* opens the calendar day after Day *n−1* is first passed, unless **Sprint mode** is on in Settings.
+- **Fast roads and conditions (Week 3).** `src/world/scenes/devonLayout.ts` describes one-way carriageways (lanes, hard shoulders, slip roads, a smart section with gantries and a lane closed by a red X). `src/world/conditions.ts` sets night, rain and fog (sky, fog, rain streaks, headlight beam) and reports dark/wet/poor visibility to the rules; braking grip drops in the wet. `analysis.fastRoads()` measures following gaps, lane changes, merges, undertaking and lane discipline for `src/rules/checks/fastRoads.ts`. AI traffic keeps a time gap on fast roads, and lorries drive slower.
 - **Town simulation (Week 2).** AI cars follow lane paths, give way at roundabouts and junctions (first come, first served), stop at red lights and for people on crossings. `src/sim/street.ts` runs the signal phases (junction lights, pelican, puffin) and the pedestrians, and decides "must I stop at this line?" for AI cars, the scripted test driver and the rules alike. `src/sim/analysis.ts` turns the road situation into rule events (roundabout entries/exits, stop lines, passing cyclists, box junctions).
 - **Replays.** A 10 Hz ring buffer records the car. Each test fault keeps the 8 seconds around it, drawn as a top-down replay with the Highway Code rule.
 - **Capacitor-ready.** Relative asset paths, no server, and every browser API sits behind `src/platform/*`, so native plugins can replace them later.
@@ -118,4 +130,4 @@ British English and UK terms (bonnet, boot, kerb, give way, dual carriageway). S
 
 ## Accuracy
 
-Rules cited in Week 1 were checked against gov.uk on 23 November 2026: rules 97, 99, 103, 109, 112, 123, 124, 125, 126, 127, 129, 146, 152, 159, 160, 161, 163, 170, 171, 172, 179, 180, 182, 183, 238, 239, 240 and 243, plus the Traffic signs and Road markings sections. Week 2 rules were checked on 24 November 2026: H1–H3, 141, 163 (passing distances), 174–178, 184–204, 207, 208, 210–213 and 215, plus the Light signals section. Fault severities, timing windows and pass marks are game-design choices modelled on DVSA marking, and are listed for review in `NEEDS_REVIEW.md`. Road signs are original procedural drawings that follow UK shapes and colours. Cars are generic, with no real brands.
+Rules cited in Week 1 were checked against gov.uk on 23 November 2026: rules 97, 99, 103, 109, 112, 123, 124, 125, 126, 127, 129, 146, 152, 159, 160, 161, 163, 170, 171, 172, 179, 180, 182, 183, 238, 239, 240 and 243, plus the Traffic signs and Road markings sections. Week 2 rules were checked on 24 November 2026: H1–H3, 141, 163 (passing distances), 174–178, 184–204, 207, 208, 210–213 and 215, plus the Light signals section. Week 3 rules were checked on 25 November 2026: 113–116, 126, 133, 137, 154–156, 162–168, 226, 227, 235, 253, 255–259, 261, 263, 264, 267–271, 273 and 275, plus the typical stopping distances table. Fault severities, timing windows and pass marks are game-design choices modelled on DVSA marking, and are listed for review in `NEEDS_REVIEW.md`. Road signs are original procedural drawings that follow UK shapes and colours. Cars are generic, with no real brands.

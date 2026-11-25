@@ -7,7 +7,7 @@ import { COMBE_ROUTE } from './day15';
  * and the A386 after dark: dipped and main beam, and dipping for others.
  */
 /** Oncoming cars after dark: one on the lane, one on the A386. */
-const NIGHT_LANE: ScriptedCar = { when: { x0: 610, x1: 630, z0: 440, z1: 470 }, from: { x: 620, z: 690, heading: DV_HEADINGS.S }, speed: 6.5, colour: 0xe8e4da };
+const NIGHT_LANE: ScriptedCar = { when: { x0: 610, x1: 630, z0: 478, z1: 500 }, from: { x: 620, z: 770, heading: DV_HEADINGS.S }, speed: 6.5, colour: 0xe8e4da };
 const NIGHT_A386: ScriptedCar = { when: { x0: CX - 8, x1: CX + 8, z0: 905, z1: 940 }, from: { x: CX - AH / 2, z: 1260, heading: DV_HEADINGS.S }, speed: 18, colour: 0x9aa3ab };
 
 export const day20: LessonContent = {

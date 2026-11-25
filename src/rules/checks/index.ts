@@ -227,7 +227,8 @@ export function signalCancelCheck(): Check {
       if (ev.type !== 'tick' || ctx.signal === 'off' || flagged) return null;
       const turned = Math.abs(angleDiff(ctx.heading, ctx.headingAtSignal)) > TUNING.signalUsedTurnRad;
       // After pulling up, the signal has done its job; a much shorter distance counts as forgotten.
-      const limit = ctx.stoppedSinceSignal ? TUNING.signalForgottenAfterStopM : TUNING.signalForgottenM;
+      // At speed a signal covers more ground: allow about ten seconds' travel (motorway exits, rule 273).
+      const limit = ctx.stoppedSinceSignal ? TUNING.signalForgottenAfterStopM : Math.max(TUNING.signalForgottenM, Math.abs(ctx.speed) * 10);
       if (!turned && ctx.distSinceSignal > limit) {
         flagged = true;
         return 'signal-not-cancelled';

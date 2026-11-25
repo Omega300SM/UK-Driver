@@ -79,7 +79,7 @@ tests/e2e              Playwright (iPhone 13 portrait + landscape): launch, less
 | M5 | Tests + docs ✅ | Vitest + Playwright, README, Vercel guide → iPhone review done (layout, two-finger controls, voice fixes) |
 | M6 | Week 1 ✅ | Days 2–7 in Little Ashby: moving off/stopping, road position and meeting, speed limits, signs and markings, junctions, BOSS: Market Town Test. AI traffic, scripted test routes |
 | M7 | Week 2 ✅ | Days 8–14 in Mill Town: roundabouts (mini, two-lane spiral, the Magic Roundabout), crossings (zebra/pelican/puffin), lights + box junction + bus lane, reverse bay and parallel parking, vulnerable road users (H1–H3, cyclists, horses, school patrol), BOSS: Rush Hour. Path-following AI, signal controllers, pedestrians, reversing camera, scripted test routes |
-| M8 | Week 3 | Country lanes, weather + stopping distances, dual carriageways, motorways + smart motorways, night, BOSS: Coast run |
+| M8 | Week 3 ✅ | Days 15–21 on the Devon Run: country lanes and passing places, stopping distances with rain and fog (emergency stop), dual carriageways and overtaking, motorways (joining, lane discipline, leaving), smart motorways (gantries, red X, emergency areas), night driving (dipped/main, dazzle), BOSS: Run to the Coast in the rain. Conditions system, fast-road AI with lorries, scripted test routes |
 | M9 | Week 4 | Hazard perception clips, special situations, law, eco/EV/warning lights, sat nav + show me/tell me, mock theory + practical, Grand Tour, graduation certificate (shareable PNG) |
 | M10 | Stretch | Manual gearbox + clutch, badges polish, map of England art, Capacitor wrapper notes |
 

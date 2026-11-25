@@ -52,13 +52,16 @@ export class Autopilot {
       if (wp.v === 0 && (dist < 0.2 || this.overshot(car, wp))) return { throttle: 0, brake: 0.6, steer };
       return { throttle: dv > 0 ? Math.min(0.6, dv * 0.5) : 0, brake: dv < -0.3 ? Math.min(0.5, -dv * 0.25) : 0, steer };
     }
-    if ((wp.v > 0 && dist < 3.5) || (wp.v === 0 && dist < 1.2 && Math.abs(car.speed) < 0.05)) {
+    // At speed, aim further ahead (a waypoint is 'reached' sooner) and steer more gently.
+    const reach = car.speed > 12 ? Math.max(3.5, car.speed * 0.3) : 3.5;
+    if ((wp.v > 0 && dist < reach) || (wp.v === 0 && dist < 1.2 && Math.abs(car.speed) < 0.05)) {
       this.i++;
       return this.drive(car);
     }
     const desired = Math.atan2(dx, dz);
     const err = angleDiff(desired, car.heading);
-    const steer = Math.max(-1, Math.min(1, -err * 2.2));
+    const gain = car.speed > 12 ? (2.2 * 12) / car.speed : 2.2;
+    const steer = Math.max(-1, Math.min(1, -err * gain));
     const target = wp.v === 0 ? Math.min(4, dist * 0.6) : wp.v;
     const dv = target - car.speed;
     if (wp.v === 0 && dist < 1.5) return { throttle: 0, brake: 0.5, steer };

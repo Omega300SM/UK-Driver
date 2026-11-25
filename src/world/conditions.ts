@@ -39,6 +39,12 @@ export function applyConditions(scene: THREE.Scene, root: THREE.Object3D, carGro
   root.traverse((o) => {
     const l = o as THREE.Light;
     if (l.isLight) l.intensity *= lightScale;
+    // Distant scenery drawn without fog on a clear day disappears into rain and fog like everything else.
+    const m = (o as THREE.Mesh).material as THREE.Material | undefined;
+    if (m && !Array.isArray(m) && m.userData?.distant && weather !== 'clear') {
+      (m as THREE.MeshLambertMaterial).fog = true;
+      m.needsUpdate = true;
+    }
   });
   let base = new THREE.Color(SKY[time]);
   if (weather !== 'clear' && time !== 'night') base = base.lerp(new THREE.Color(0xa4adb4), 0.75);
