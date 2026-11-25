@@ -3,7 +3,7 @@ import type { RuleRef } from './schema';
 const HC = 'https://www.gov.uk/guidance/the-highway-code';
 
 /**
- * Highway Code references. Text paraphrased from gov.uk, checked 23–24 Nov 2026 (Days 1–13).
+ * Highway Code references. Text paraphrased from gov.uk, checked 23–25 Nov 2026 (Days 1–21).
  * Add new rules here and cite them by number from lessons and faults.
  */
 export const RULES: Record<number, RuleRef> = {
@@ -358,6 +358,243 @@ export const RULES: Record<number, RuleRef> = {
       'Be particularly careful of horse riders. Slow to a maximum of 10 mph, be patient, don’t sound your horn or rev, and when safe pass wide and slow, allowing at least 2 metres.',
     url: `${HC}/road-users-requiring-extra-care-204-to-225`
   },
+  113: {
+    rule: 113,
+    title: 'Lights at night',
+    summary:
+      'You MUST ensure sidelights and rear number plate lights are lit between sunset and sunrise. Use headlights at night, except on roads with lit street lighting, and when visibility is seriously reduced.',
+    url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
+  },
+  114: {
+    rule: 114,
+    title: 'Don’t dazzle',
+    summary:
+      'You MUST NOT use any lights in a way that would dazzle or cause discomfort to other road users, including pedestrians, cyclists and horse riders. Fog lights only when visibility is seriously reduced.',
+    url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
+  },
+  115: {
+    rule: 115,
+    title: 'Dipped headlights',
+    summary:
+      'Use dipped headlights at night in built-up areas and in dull daytime weather. Keep them dipped when overtaking until you’re level with the other vehicle. Slow down, or stop, if you’re dazzled by oncoming lights.',
+    url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
+  },
+  133: {
+    rule: 133,
+    title: 'Changing lanes',
+    summary:
+      'Before changing lane, use your mirrors and if necessary take a quick sideways glance so you won’t force anyone to change course or speed. When safe, signal, then move over when clear.',
+    url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
+  },
+  137: {
+    rule: 137,
+    title: 'Two-lane dual carriageways',
+    summary:
+      'Stay in the left-hand lane. Use the right-hand lane for overtaking or turning right, then move back to the left-hand lane when it’s safe.',
+    url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
+  },
+  154: {
+    rule: 154,
+    title: 'Country roads',
+    summary:
+      'Take extra care on country roads: slow down for bends, which can be sharper than they look, and for partly hidden junctions. Expect walkers, horse riders, cyclists, farm vehicles and mud. Make sure you can stop within the distance you can see to be clear.',
+    url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
+  },
+  155: {
+    rule: 155,
+    title: 'Single-track roads',
+    summary:
+      'These are only wide enough for one vehicle and may have passing places. If someone comes towards you (or wants to overtake), pull into a passing place on your left, or wait opposite one on your right. Give way to traffic coming uphill when you can; reverse to a passing place if you need to.',
+    url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
+  },
+  226: {
+    rule: 226,
+    title: 'Poor visibility',
+    summary:
+      'You MUST use headlights when visibility is seriously reduced, generally when you can’t see more than 100 metres. You may use fog lights, but MUST switch them off when visibility improves.',
+    url: `${HC}/driving-in-adverse-weather-conditions-226-to-237`
+  },
+  227: {
+    rule: 227,
+    title: 'Wet weather',
+    summary:
+      'In the wet, stopping distances are at least double those on dry roads, because your tyres have less grip. Keep well back from the vehicle in front. If the steering goes light, ease off the accelerator and slow down gradually.',
+    url: `${HC}/driving-in-adverse-weather-conditions-226-to-237`
+  },
+  235: {
+    rule: 235,
+    title: 'Driving in fog',
+    summary:
+      'Use your lights as required, keep a safe distance, and be able to pull up well within the distance you can see clearly, especially on motorways and dual carriageways.',
+    url: `${HC}/driving-in-adverse-weather-conditions-226-to-237`
+  },
+  253: {
+    rule: 253,
+    title: 'Who may use motorways',
+    summary:
+      'Provisional car licence holders MUST NOT drive on a motorway unless accompanied by an approved driving instructor in a car with dual controls and L plates.',
+    url: `${HC}/motorways-253-to-273`
+  },
+  258: {
+    rule: 258,
+    title: 'Red X and red lights',
+    summary:
+      'A red X or red flashing lights mean a lane is closed: there may be people or stopped vehicles in it. You MUST move to an open lane as signs direct and MUST NOT drive in a closed lane.',
+    url: `${HC}/motorways-253-to-273`
+  },
+  259: {
+    rule: 259,
+    title: 'Joining the motorway',
+    summary:
+      'Give priority to traffic already on the motorway, check it, and match your speed to fit safely into the left-hand lane. Don’t cross solid white lines or use the hard shoulder; stay on the slip road if it continues as an extra lane.',
+    url: `${HC}/motorways-253-to-273`
+  },
+  263: {
+    rule: 263,
+    title: 'No reversing or U-turns',
+    summary:
+      'Unless directed by the police or a traffic officer, you MUST NOT reverse along any part of a motorway (including slip roads and hard shoulders), cross the central reservation, or drive against the traffic flow. Missed your exit? Carry on to the next.',
+    url: `${HC}/motorways-253-to-273`
+  },
+  264: {
+    rule: 264,
+    title: 'Keep left',
+    summary:
+      'Keep in the left lane unless overtaking, and return to it when it’s safe. Move over to give room to anyone stopped on the hard shoulder or in an emergency area.',
+    url: `${HC}/motorways-253-to-273`
+  },
+  267: {
+    rule: 267,
+    title: 'Overtaking on the motorway',
+    summary:
+      'Overtake only on the right, when safe and legal: mirrors, judge speeds, check the lane is clear ahead and behind, a quick sideways glance for the blind spot, then signal in plenty of time and move out.',
+    url: `${HC}/motorways-253-to-273`
+  },
+  268: {
+    rule: 268,
+    title: 'No overtaking on the left',
+    summary:
+      'Do not overtake on the left or move to a lane on your left to overtake. In congested traffic you may keep up with your lane even if it passes the lane to your right.',
+    url: `${HC}/motorways-253-to-273`
+  },
+  269: {
+    rule: 269,
+    title: 'Hard shoulder',
+    summary:
+      'You MUST NOT use the hard shoulder except in an emergency or if directed by the police, traffic officers or a traffic sign. Where it’s used as a lane, a red X or blank sign above it means you MUST NOT use it.',
+    url: `${HC}/motorways-253-to-273`
+  },
+  270: {
+    rule: 270,
+    title: 'Emergency areas',
+    summary:
+      'Emergency areas, marked by blue signs with an orange SOS telephone and often orange surfacing, MUST only be used in an emergency.',
+    url: `${HC}/motorways-253-to-273`
+  },
+  271: {
+    rule: 271,
+    title: 'No stopping',
+    summary:
+      'You MUST NOT stop on any carriageway, emergency area, hard shoulder, slip road, central reservation or verge except in an emergency, or when told to by the police, traffic officers, an emergency sign or red flashing lights.',
+    url: `${HC}/motorways-253-to-273`
+  },
+  273: {
+    rule: 273,
+    title: 'Leaving the motorway',
+    summary:
+      'Watch for the signs for your exit, move into the left-hand lane well before it, signal left in good time and slow down on the slip road as needed.',
+    url: `${HC}/motorways-253-to-273`
+  },
+  156: {
+    rule: 156,
+    title: 'Passing places',
+    summary: 'Do not park in passing places.',
+    url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
+  },
+  162: {
+    rule: 162,
+    title: 'Before overtaking',
+    summary:
+      'Make sure the road is sufficiently clear ahead, road users are not beginning to overtake you, and there is a suitable gap in front of the road user you plan to overtake.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  164: {
+    rule: 164,
+    title: 'Overtaking large vehicles',
+    summary:
+      'Drop back from large vehicles: it improves your view ahead and lets the driver see you in their mirrors. Make sure you have enough room to complete the overtake before committing.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  165: {
+    rule: 165,
+    title: 'When you MUST NOT overtake',
+    summary:
+      'You MUST NOT overtake if you would have to cross or straddle double white lines with a solid line nearest you, enter an area marked to separate traffic, pass the vehicle nearest a pedestrian crossing, or after a No Overtaking sign.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  166: {
+    rule: 166,
+    title: 'Don’t overtake if in doubt',
+    summary:
+      'Do not overtake if there is any doubt, or where you cannot see far enough ahead to be sure it’s safe: approaching a bend, a hump bridge or the brow of a hill.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  167: {
+    rule: 167,
+    title: 'Don’t overtake into conflict',
+    summary:
+      'Do not overtake where you might come into conflict with others: at or approaching junctions, where the road narrows, approaching a school crossing patrol, or where traffic is queuing.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  168: {
+    rule: 168,
+    title: 'Being overtaken',
+    summary:
+      'If someone is overtaking you, keep a steady course and speed, slowing down if necessary to let them pass. Drop back to a two-second gap if they pull in ahead of you.',
+    url: `${HC}/using-the-road-159-to-203`
+  },
+  255: {
+    rule: 255,
+    title: 'Motorway signals',
+    summary:
+      'Signs and signals warn of hazards ahead, such as an incident, fog, a spillage or road workers you may not yet be able to see.',
+    url: `${HC}/motorways-253-to-273`
+  },
+  256: {
+    rule: 256,
+    title: 'Lane signals',
+    summary:
+      'A single sign or signal can apply to all lanes; lane-specific signs and signals apply to individual lanes.',
+    url: `${HC}/motorways-253-to-273`
+  },
+  257: {
+    rule: 257,
+    title: 'Amber flashing lights',
+    summary:
+      'Amber flashing lights warn of a hazard ahead: reduce your speed and be prepared. Only speed up when you pass a signal that isn’t flashing, or a national speed limit sign or END.',
+    url: `${HC}/motorways-253-to-273`
+  },
+  261: {
+    rule: 261,
+    title: 'Motorway speed limits',
+    summary:
+      'You MUST NOT exceed a speed limit displayed within a red circle on a sign, or the maximum speed limit for the road and your vehicle.',
+    url: `${HC}/motorways-253-to-273`
+  },
+  275: {
+    rule: 275,
+    title: 'Breaking down',
+    summary:
+      'If you need to stop after a breakdown or incident, try to stop in a place of relative safety: a service area is safest on high-speed roads; others include lay-bys, emergency areas and hard shoulders.',
+    url: `${HC}/breakdowns-and-incidents-274-to-287`
+  },
+  116: {
+    rule: 116,
+    title: 'Hazard warning lights',
+    summary:
+      'Use them when stationary to warn you are temporarily obstructing traffic. You MUST NOT use them while driving, unless on a motorway or unrestricted dual carriageway to warn drivers behind of a hazard ahead.',
+    url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
+  },
   184: {
     rule: 184,
     title: 'Approaching a roundabout',
@@ -410,7 +647,8 @@ export const RULES: Record<number, RuleRef> = {
   126: {
     rule: 126,
     title: 'Stopping distances',
-    summary: 'Drive at a speed that will allow you to stop well within the distance you can see to be clear.',
+    summary:
+      'Drive at a speed that will allow you to stop well within the distance you can see to be clear. Leave at least a two-second gap on high-speed roads, at least doubled on wet roads and up to ten times on icy roads. Never get closer than the overall stopping distance.',
     url: `${HC}/general-rules-techniques-and-advice-for-all-drivers-and-riders-103-to-158`
   },
   159: {

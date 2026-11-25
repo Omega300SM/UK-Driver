@@ -3,8 +3,9 @@ import { getLesson, CURRICULUM } from '../../src/content/curriculum';
 import { isDrivable, type SceneLayout } from '../../src/world/layout';
 import { MILL_TOWN } from '../../src/world/scenes/millTownLayout';
 import { TOWN } from '../../src/world/scenes/townLayout';
+import { DEVON } from '../../src/world/scenes/devonLayout';
 
-const SCENES: Record<string, SceneLayout | undefined> = { millTown: MILL_TOWN, town: TOWN };
+const SCENES: Record<string, SceneLayout | undefined> = { millTown: MILL_TOWN, town: TOWN, devon: DEVON };
 
 describe('lesson content', () => {
   for (const d of CURRICULUM.filter((c) => c.available)) {

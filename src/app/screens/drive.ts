@@ -28,6 +28,8 @@ import { sfx, engineStart, engineStop, engineUpdate } from '../../platform/audio
 import { isStandalone } from '../../platform/ios';
 import { requestMotionPermission, startTilt, stopTilt, tilt } from '../../platform/motion';
 import type { DriveSetup, GuidedStep, Trigger } from '../../content/schema';
+import { applyConditions, type LightsState } from '../../world/conditions';
+import { devonChecks } from '../../rules/checks/fastRoads';
 
 type DriveMode = Extract<Stage, 'guided' | 'free' | 'test'>;
 
@@ -53,7 +55,9 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
   // ---------- DOM ----------
   const canvas = h('canvas', { class: 'gl', 'aria-label': 'Road view. Swipe left or right to look over your shoulder.' }) as HTMLCanvasElement;
   const hud = h('div', { class: 'hud' });
-  const el = h('div', { class: 'screen drive', 'data-testid': `drive-${mode}` }, canvas, hud);
+  // Raindrops on the windscreen when it's raining and the wipers are off.
+  const rainGlass = h('div', { class: 'rain-glass', 'aria-hidden': 'true' });
+  const el = h('div', { class: 'screen drive', 'data-testid': `drive-${mode}` }, canvas, rainGlass, hud);
 
   const bubble = new SpeechBubble({ size: 46 });
   const wheel = new SteeringWheel();
@@ -95,8 +99,8 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     gearBtns[g] = btn({ 'aria-label': `Gear ${g}`, 'data-testid': `hud-gear-${g}` }, g, () => act.gear(g));
     gearEl.append(gearBtns[g]);
   }
-  const lightsBtn = btn({ class: 'hud-btn', 'aria-label': 'Headlights' }, '💡', () => act.lights());
-  const wipersBtn = btn({ class: 'hud-btn', 'aria-label': 'Wipers' }, '🌧', () => act.wipers());
+  const lightsBtn = btn({ class: 'hud-btn', 'data-hud': 'lights', 'aria-label': 'Headlights' }, '💡', () => act.lights());
+  const wipersBtn = btn({ class: 'hud-btn', 'data-hud': 'wipers', 'aria-label': 'Wipers' }, '🌧', () => act.wipers());
   const hornBtn = btn({ class: 'hud-btn', 'aria-label': 'Horn' }, '📯', () => act.horn());
   const camBtn = btn({ class: 'hud-btn', 'aria-label': 'Switch camera' }, '🎥', () => act.camera());
   // Car controls on the right (next to the pedals), extras on the left.
@@ -140,6 +144,8 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
   renderer.scene.fog = town ? new THREE.Fog(0xcfe0ea, 90, 340) : new THREE.Fog(0xcfe0ea, 70, 260);
   const carMesh = buildPlayerCar();
   renderer.scene.add(carMesh.group);
+  // Weather and time of day (Week 3 onwards; other scenes keep their own sky).
+  const conds = applyConditions(renderer.scene, world.root, carMesh.group, setup.conditions ?? {}, L.fogZones ?? [], !!setup.conditions || lesson.sceneId === 'devon');
   const mirrorCam = new THREE.PerspectiveCamera(55, 3, 0.3, 200);
 
   // AI cars: one instanced mesh each for bodies, cabins and shadows.
@@ -152,51 +158,69 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     m.frustumCulled = false;
     renderer.scene.add(m);
   }
+  // Head and tail lights for AI vehicles at night or in poor weather (one bar each, front white, rear red).
+  const aiLamps = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xffffff }), AI_MAX * 2);
+  aiLamps.frustumCulled = false;
+  aiLamps.count = 0;
+  renderer.scene.add(aiLamps);
+  const c0 = setup.conditions ?? {};
+  const lampsOn = c0.time === 'night' || c0.time === 'dusk' || c0.weather === 'fog' || c0.weather === 'rain';
   const aiDummy = new THREE.Object3D();
   const aiColour = new THREE.Color();
+  /** Box sizes [w, h, l] and heights for each kind's body and "cab" (rider, lorry cab, tractor cab). */
+  const LOOK = {
+    car: { body: [1.8, 0.62, 4.2], by: 0.3, cab: [1.6, 0.55, 2.2], cy: 0.92, cabFwd: 0, shadow: [2.2, 4.6] },
+    bike: { body: [0.12, 0.8, 1.7], by: 0.25, cab: [0.45, 0.75, 0.45], cy: 1.0, cabFwd: 0, shadow: [0.9, 2] },
+    horse: { body: [0.6, 1.3, 2.2], by: 0.35, cab: [0.45, 0.75, 0.45], cy: 1.75, cabFwd: 0, shadow: [0.9, 2.8] },
+    lorry: { body: [2.5, 3.0, 9.4], by: 0.9, cab: [2.4, 2.6, 2.3], cy: 0.7, cabFwd: 4.8, shadow: [3, 12.4] },
+    tractor: { body: [2.0, 1.1, 3.4], by: 0.5, cab: [1.5, 1.4, 1.6], cy: 1.6, cabFwd: -0.6, shadow: [2.6, 5.8] }
+  } as const;
   const renderTraffic = () => {
     const cars = traffic.cars.slice(0, AI_MAX);
+    let lamps = 0;
     cars.forEach((c, i) => {
       const kind = c.kind ?? 'car';
+      const lk = LOOK[kind];
+      const fx = Math.sin(c.heading);
+      const fz = Math.cos(c.heading);
+      const back = kind === 'lorry' ? -1.3 : 0; // the trailer sits behind the cab
       aiDummy.rotation.set(0, c.heading, 0);
-      // Body: car, bicycle (thin frame), or horse; "cab" is the rider for bikes and horses.
-      if (kind === 'bike') {
-        aiDummy.position.set(c.x, 0.25, c.z);
-        aiDummy.scale.set(0.12, 0.8, 1.7);
-      } else if (kind === 'horse') {
-        aiDummy.position.set(c.x, 0.35, c.z);
-        aiDummy.scale.set(0.6, 1.3, 2.2);
-      } else {
-        aiDummy.position.set(c.x, 0.3, c.z);
-        aiDummy.scale.set(1.8, 0.62, 4.2);
-      }
+      aiDummy.position.set(c.x + fx * back, lk.by, c.z + fz * back);
+      aiDummy.scale.set(lk.body[0], lk.body[1], lk.body[2]);
       aiDummy.updateMatrix();
       aiBodies.setMatrixAt(i, aiDummy.matrix);
-      aiBodies.setColorAt(i, aiColour.setHex(kind === 'horse' ? 0x6b4a2e : kind === 'bike' ? 0x2b2f36 : c.colour));
-      if (kind === 'bike') {
-        aiDummy.position.set(c.x, 1.0, c.z);
-        aiDummy.scale.set(0.45, 0.75, 0.45);
-      } else if (kind === 'horse') {
-        aiDummy.position.set(c.x, 1.75, c.z);
-        aiDummy.scale.set(0.45, 0.75, 0.45);
-      } else {
-        aiDummy.position.set(c.x, 0.92, c.z);
-        aiDummy.scale.set(1.6, 0.55, 2.2);
-      }
+      aiBodies.setColorAt(i, aiColour.setHex(kind === 'horse' ? 0x6b4a2e : kind === 'bike' ? 0x2b2f36 : kind === 'tractor' ? 0x3c7a2a : kind === 'lorry' ? 0xe9e6de : c.colour));
+      aiDummy.position.set(c.x + fx * lk.cabFwd, lk.cy, c.z + fz * lk.cabFwd);
+      aiDummy.scale.set(lk.cab[0], lk.cab[1], lk.cab[2]);
       aiDummy.updateMatrix();
       aiCabs.setMatrixAt(i, aiDummy.matrix);
-      if (kind !== 'car') aiCabs.setColorAt(i, aiColour.setHex(0xd6f22b)); // hi-vis
-      else aiCabs.setColorAt(i, aiColour.setHex(0x2b3440));
+      aiCabs.setColorAt(i, aiColour.setHex(kind === 'bike' || kind === 'horse' ? 0xd6f22b : kind === 'lorry' ? c.colour : kind === 'tractor' ? 0x2e5c2a : 0x2b3440));
       aiDummy.position.set(c.x, 0.015, c.z);
-      if (kind === 'car') aiDummy.scale.set(2.2, 0.01, 4.6);
-      else aiDummy.scale.set(0.9, 0.01, kind === 'horse' ? 2.8 : 2);
+      aiDummy.scale.set(lk.shadow[0], 0.01, lk.shadow[1]);
       aiDummy.updateMatrix();
       aiShadows.setMatrixAt(i, aiDummy.matrix);
+      if (lampsOn && (kind === 'car' || kind === 'lorry' || kind === 'tractor')) {
+        const half = (kind === 'lorry' ? 12 : kind === 'tractor' ? 5.5 : 4.2) / 2;
+        for (const [d, col] of [
+          [half + 0.05, 0xfff6d8],
+          [-half - 0.05, 0xff2a1a]
+        ] as const) {
+          aiDummy.position.set(c.x + fx * d, 0.7, c.z + fz * d);
+          aiDummy.scale.set(lk.body[0] * 0.8, 0.18, 0.08);
+          aiDummy.updateMatrix();
+          aiLamps.setMatrixAt(lamps, aiDummy.matrix);
+          aiLamps.setColorAt(lamps, aiColour.setHex(col));
+          lamps++;
+        }
+      }
     });
     for (const m of [aiBodies, aiCabs, aiShadows]) {
       m.count = cars.length;
       m.instanceMatrix.needsUpdate = true;
     }
+    aiLamps.count = lamps;
+    aiLamps.instanceMatrix.needsUpdate = true;
+    if (aiLamps.instanceColor) aiLamps.instanceColor.needsUpdate = true;
     if (aiBodies.instanceColor) aiBodies.instanceColor.needsUpdate = true;
     if (aiCabs.instanceColor) aiCabs.instanceColor.needsUpdate = true;
   };
@@ -207,9 +231,10 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
   car.reset(start.x, start.z, start.heading);
   car.gear = 'P';
   car.handbrake = true;
-  const rules = new RulesEngine(lesson.checks === 'millTown' ? millTownChecks() : town ? townChecks() : day1Checks(), mode === 'test' ? 'test' : 'coach');
+  car.grip = conds.state().wet ? 0.6 : 1;
+  const rules = new RulesEngine(lesson.checks === 'devon' ? devonChecks() : lesson.checks === 'millTown' ? millTownChecks() : town ? townChecks() : day1Checks(), mode === 'test' ? 'test' : 'coach');
   const recorder = new Recorder();
-  const traffic = new Traffic(L, setup.traffic ?? 'none', setup.scripted ?? []);
+  const traffic = new Traffic(L, setup.traffic ?? 'none', setup.scripted ?? [], 3, start);
   // Traffic lights, crossings and pedestrians (Week 2 onwards).
   const street = L.signals?.length || L.crossings?.length ? new StreetControl(L, setup.traffic ?? 'none') : null;
   traffic.street = street;
@@ -219,7 +244,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
   let signal: SignalState = 'off';
   let signalHeading = 0;
   let signalTurned = false;
-  let lights = false;
+  let lights: LightsState = 'off';
   let wipers = false;
   let cameraMode = settings.camera;
   let stationary = true;
@@ -321,8 +346,9 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
       emit({ type: 'gear', t, gear: g });
       refreshHud();
     },
+    /** Headlights: off → dipped → main beam → off. */
     lights() {
-      lights = !lights;
+      lights = lights === 'off' ? 'dipped' : lights === 'dipped' ? 'main' : 'off';
       sfx.tap();
       refreshHud();
     },
@@ -358,9 +384,12 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     for (const g of ['P', 'R', 'D'] as Gear[]) gearBtns[g].classList.toggle('on', car.gear === g);
     indL.classList.toggle('on', signal === 'left');
     indR.classList.toggle('on', signal === 'right');
-    lightsBtn.classList.toggle('on', lights);
+    lightsBtn.classList.toggle('on', lights !== 'off');
+    lightsBtn.classList.toggle('main', lights === 'main');
+    lightsBtn.setAttribute('aria-label', lights === 'main' ? 'Headlights: main beam' : lights === 'dipped' ? 'Headlights: dipped' : 'Headlights: off');
+    rainGlass.style.opacity = conds.state().wet ? (wipers ? '0.1' : '0.75') : '0';
     wipersBtn.classList.toggle('on', wipers);
-    setLamp(carMesh.headlights, lights, 0xfffbe0, 0xd8d8cc);
+    setLamp(carMesh.headlights, lights !== 'off', 0xfffbe0, 0xd8d8cc);
   };
 
   // ---------- Shoulder-check swipe on the road view ----------
@@ -406,6 +435,8 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
   let stepIdx = -1;
   let stepStart = 0;
   let nudged = false;
+  /** Controlled stop in progress: when and where "Stop!" was called, and when the brake went on. */
+  let esStart: { t: number; v: number; x: number; z: number; braked: number } | null = null;
   const stepEvents = new Set<string>();
 
   const eventKey = (ev: DriveEvent): string => {
@@ -481,6 +512,12 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
         return signal === arg;
       case 'moving':
         return car.speed > 0.9;
+      case 'wipers':
+        return wipers === (arg === 'on');
+      case 'lights':
+        return lights === arg;
+      case 'stopped':
+        return Math.abs(car.speed) < 0.05 && t - stepStart > 0.4;
       case 'marker': {
         const mk = L.markers.find((x) => x.id === arg)!;
         return inRect(grow(mk, town ? 14 : 8), car.x, car.z);
@@ -610,7 +647,8 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
             }
           }
         }
-        const safe = 3 + Math.abs(car.speed) * 1.6;
+        // Two-second rule (rule 126), doubled in the wet (rule 227).
+        const safe = 3 + Math.abs(car.speed) * (conds.state().wet ? 4.4 : 2.3);
         if (gap < safe) {
           ap.throttle = 0;
           ap.brake = Math.max(ap.brake, gap < 2.5 ? 0.6 : Math.min(0.45, (safe - gap) * 0.12));
@@ -627,6 +665,7 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     if (settings.steeringAssist) steer = assist(steer);
 
     const shape = { x: car.x, z: car.z, heading: car.heading, speed: car.speed, corners: car.corners() };
+    conds.update(dt, renderer.camera, car, lights);
     if (street && !ended) street.update(dt, [...traffic.cars, shape], shape);
     if (!ended) traffic.update(dt, shape);
     const movingObs = [...(traffic.cars.length ? traffic.obstacles() : []), ...(street ? street.obstacles() : [])];
@@ -683,7 +722,8 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
       wrongSideBy: sit?.inDoubleWhite ? wrongSideAt(L, car.x, car.z, car.heading) : wrongSideBy,
       handbrake: car.handbrake,
       throttle,
-      ...(sit ?? {})
+      ...(sit ?? {}),
+      ...(lesson.checks === 'devon' ? analyser.fastRoads(t, lights, conds.state(), emit) : {})
     });
     if (town && !ended) {
       analyser.junctionLines(t, emit);
@@ -709,8 +749,27 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
     // Stage logic.
     if (mode === 'guided' && stepIdx >= 0 && stepIdx < steps.length) {
       const st = steps[stepIdx];
+      if (st.emergencyStop && !esStart) esStart = { t, v: Math.abs(car.speed), x: car.x, z: car.z, braked: -1 };
+      if (esStart && esStart.braked < 0 && brakeValue > 0.5) esStart.braked = t;
       if (triggerMet(st.await)) {
         sfx.good();
+        if (st.emergencyStop && esStart) {
+          // Report the controlled stop against the Highway Code's typical figures (rule 126).
+          const dist = Math.hypot(car.x - esStart.x, car.z - esStart.z);
+          const react = esStart.braked > 0 ? esStart.braked - esStart.t : NaN;
+          const v = mph(esStart.v);
+          const typical = typicalStoppingM(v) * (conds.state().wet ? 2 : 1);
+          bubble.say(
+            `You stopped in ${Math.round(dist)} metres from ${Math.round(v)} miles an hour${Number.isFinite(react) ? `, reacting in ${react.toFixed(1)} seconds` : ''}. The Highway Code's typical figure ${conds.state().wet ? 'in the wet is at least' : 'is'} about ${Math.round(typical)} metres. ${dist <= typical ? 'Well done.' : 'That’s why we leave a big gap.'}`,
+            'proud',
+            settings.voice
+          );
+          esStart = null;
+          const next = stepIdx + 1;
+          setTimeout(() => startStep(next), 6500 / app.timeScale);
+          stepIdx = -2; // hold the steps while Maggie talks
+          return;
+        }
         startStep(stepIdx + 1);
       } else if (!nudged && t - stepStart > 12) {
         nudged = true;
@@ -957,6 +1016,8 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
   const hooks = {
     car,
     rules,
+    /** The Three.js scene (for debugging in e2e mode). */
+    scene: renderer.scene,
     act,
     get t() {
       return t;
@@ -1217,3 +1278,26 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
   };
 }
 
+
+/**
+ * Typical overall stopping distance (m) for a car on a dry road, from the
+ * Highway Code's chart (thinking + braking distance; see NEEDS_REVIEW.md),
+ * interpolated between 20 and 70 mph.
+ */
+export function typicalStoppingM(mphV: number): number {
+  const table: Array<[number, number]> = [
+    [20, 12],
+    [30, 23],
+    [40, 36],
+    [50, 53],
+    [60, 73],
+    [70, 96]
+  ];
+  if (mphV <= 20) return (12 * mphV) / 20;
+  for (let i = 1; i < table.length; i++) {
+    const [a, da] = table[i - 1];
+    const [b, db] = table[i];
+    if (mphV <= b) return da + ((db - da) * (mphV - a)) / (b - a);
+  }
+  return 96;
+}

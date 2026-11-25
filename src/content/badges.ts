@@ -16,6 +16,7 @@ export const BADGES: Badge[] = [
   { id: 'magic-circle', name: 'Magic Circle', description: 'Passed a lap of the Magic Roundabout.', icon: '🎩' },
   { id: 'good-neighbour', name: 'Good Neighbour', description: 'Passed the vulnerable road users lesson: patient with people, generous with space.', icon: '🚲' },
   { id: 'roundabout-royalty', name: 'Roundabout Royalty', description: 'Passed the Week 2 boss: Rush Hour in Mill Town.', icon: '👑' },
+  { id: 'coast-runner', name: 'Coast Runner', description: 'Passed the Week 3 boss: the motorway run to the coast.', icon: '🌊' },
   { id: 'graduate', name: 'Graduate', description: 'Completed all 30 days.', icon: '🎓' }
 ];
 

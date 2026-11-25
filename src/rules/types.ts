@@ -63,6 +63,59 @@ export type DriveEvent =
       onMiniCentre?: string | null;
       /** Driving along a bus lane during its hours (rule 141). */
       inBusLane?: boolean;
+      /** Fast roads (Week 3): seconds behind the vehicle ahead in your lane (null when none near). */
+      followGapS?: number | null;
+      /** Lane number on a multi-lane carriageway (1 = left), and whether the lane to your left is clear. */
+      laneNo?: number | null;
+      leftLaneClear?: boolean;
+      /** Catching up a slower vehicle in your own lane (so you're overtaking, not hogging). */
+      overtaking?: boolean;
+      inHardShoulder?: boolean;
+      inClosedLane?: boolean;
+      onMotorway?: boolean;
+      /** Driving against the flow on a one-way carriageway. */
+      wrongWayCarriageway?: boolean;
+      /** Advisory speed for a slow zone you're in (sharp bends), mph. */
+      slowZoneMph?: number | null;
+      /** Stopped on a motorway carriageway, not in a queue. */
+      stoppedOnMotorway?: boolean;
+      /** Lights and conditions. */
+      lights?: 'off' | 'dipped' | 'main';
+      dark?: boolean;
+      wet?: boolean;
+      poorVisibility?: boolean;
+      /** Main beam with someone close ahead or coming towards you. */
+      dazzling?: boolean;
+    }
+  | {
+      /** Moved from one lane to another on a multi-lane carriageway (or between a slip road and the main carriageway). */
+      type: 'laneChange';
+      t: number;
+      dir: Side;
+      from: string;
+      to: string;
+    }
+  | {
+      /** Joined the main carriageway from a slip road. */
+      type: 'merge';
+      t: number;
+      /** Seconds before a vehicle behind in lane 1 would reach you (Infinity if none closing). */
+      ttcBehind: number;
+      /** Gap to the vehicle ahead in lane 1 (m). */
+      gapAhead: number;
+      speed: number;
+      /** Crossed the solid white line before the merge area. */
+      crossedSolid: boolean;
+    }
+  | {
+      /** Passed a slower vehicle on its left (in a lane to its left). */
+      type: 'undertake';
+      t: number;
+    }
+  | {
+      /** Reversed on a motorway (including the hard shoulder and slip roads). */
+      type: 'motorwayReverse';
+      t: number;
     }
   | {
       /** The front of the car crossed a stop line at signals or a pedestrian crossing. */

@@ -1,4 +1,5 @@
 import type { Rect, SignKind, SignPlacement } from '../world/layout';
+import type { Conditions } from '../world/conditions';
 
 /**
  * Content schema. Lessons, quizzes and rule references are pure data so they
@@ -53,6 +54,14 @@ export type DiagramId =
   | 'passing-distances'
   | 'h2-junction'
   | 'rush-hour'
+  | 'stopping-distances'
+  | 'two-second'
+  | 'lane-discipline'
+  | 'overtake'
+  | 'motorway-join'
+  | 'smart-motorway'
+  | 'night-lights'
+  | 'devon-run'
   | 'none';
 
 /** A road sign drawn from the procedural sign set. */
@@ -98,6 +107,10 @@ export type Trigger =
   | 'signal.left'
   | 'signal.off'
   | 'moving'
+  | 'stopped'
+  | 'wipers.on'
+  | 'lights.dipped'
+  | 'lights.main'
   | 'look.right'
   | 'look.left'
   | 'turned.left'
@@ -119,6 +132,8 @@ export interface GuidedStep {
   nudge?: string;
   /** Pointer to highlight a HUD control (data-hud id). */
   highlight?: string;
+  /** Controlled stop: shout "Stop!", then report the reaction time and stopping distance. */
+  emergencyStop?: boolean;
 }
 
 export interface QuizQuestion {
@@ -160,7 +175,7 @@ export interface ScriptedCar {
   kind?: RoadUserKind;
 }
 
-export type RoadUserKind = 'car' | 'bike' | 'horse';
+export type RoadUserKind = 'car' | 'bike' | 'horse' | 'lorry' | 'tractor';
 
 export interface DriveSetup {
   start?: { x: number; z: number; heading: number };
@@ -170,6 +185,8 @@ export interface DriveSetup {
   hint?: Array<[number, number]>;
   /** Start parked at the kerb with belt off, handbrake on, in P (true), or ready to go. */
   parked?: boolean;
+  /** Time of day and weather (Week 3 onwards). */
+  conditions?: Conditions;
 }
 
 export interface LessonContent {
@@ -177,9 +194,9 @@ export interface LessonContent {
   world: WorldId;
   title: string;
   subtitle: string;
-  sceneId: 'carPark' | 'town' | 'millTown';
+  sceneId: 'carPark' | 'town' | 'millTown' | 'devon';
   /** Which rule set marks the drives. */
-  checks: 'carPark' | 'town' | 'millTown';
+  checks: 'carPark' | 'town' | 'millTown' | 'devon';
   boss?: boolean;
   briefing: BriefingSlide[];
   drill?: { intro: string; items: DrillItem[]; outro: string };

@@ -60,6 +60,22 @@ export function diagram(id: DiagramId): string {
       return hierarchy();
     case 'rush-hour':
       return rushHourMap();
+    case 'stopping-distances':
+      return stoppingDistances();
+    case 'two-second':
+      return twoSecond();
+    case 'lane-discipline':
+      return laneDiscipline();
+    case 'overtake':
+      return overtakeDiagram();
+    case 'motorway-join':
+      return motorwayJoin();
+    case 'smart-motorway':
+      return smartMotorway();
+    case 'night-lights':
+      return nightLights();
+    case 'devon-run':
+      return devonRunMap();
     case 'passing-distances':
       return passingDistances();
     case 'h2-junction':
@@ -500,4 +516,125 @@ function rushHourMap(): string {
     <polyline points="${route.map(([x, z]) => `${X(x)},${Y(z)}`).join(' ')}" stroke="#ffd23f" stroke-width="3" fill="none" stroke-dasharray="6 4"/>
     <circle cx="${X(0)}" cy="${Y(120)}" r="5" fill="#2f8a5f"/>${label(-6, 124, 'Start')}
     ${label(-6, 70, 'Canal St')}${label(100, -122, 'Canal Side', 'middle')}${label(194, -60, 'Southway')}${label(-6, -100, 'Finish')}</svg>`;
+}
+
+// ---- Week 3: fast roads ------------------------------------------------------
+const T = 'font-family="system-ui" font-weight="800"';
+
+function stoppingDistances(): string {
+  // Typical stopping distances (thinking + braking), Highway Code chart; 1 m ≈ 2.9 px.
+  const rows: Array<[number, number, number]> = [
+    [20, 6, 6],
+    [30, 9, 14],
+    [40, 12, 24],
+    [50, 15, 38],
+    [60, 18, 55],
+    [70, 21, 75]
+  ];
+  return `<svg viewBox="0 0 340 170" role="img" aria-label="Typical stopping distances: 12 m at 20 mph, 23 m at 30, 36 m at 40, 53 m at 50, 73 m at 60 and 96 m at 70, made of thinking distance plus braking distance"><rect width="340" height="170" rx="12" fill="#1f6f4a"/>
+    ${rows
+      .map(([v, think, brake], i) => {
+        const y = 14 + i * 22;
+        return `<text x="10" y="${y + 13}" ${T} font-size="11" fill="#fff">${v} mph</text>
+        <rect x="58" y="${y}" width="${think * 2.9}" height="16" fill="#ffd23f"/><rect x="${58 + think * 2.9}" y="${y}" width="${brake * 2.9}" height="16" fill="#f28c1b"/>
+        <text x="${62 + (think + brake) * 2.9}" y="${y + 13}" ${T} font-size="11" fill="#fff">${think + brake} m</text>`;
+      })
+      .join('')}
+    <rect x="58" y="150" width="10" height="10" fill="#ffd23f"/><text x="72" y="159" font-family="system-ui" font-size="10" fill="#fff">thinking</text>
+    <rect x="130" y="150" width="10" height="10" fill="#f28c1b"/><text x="144" y="159" font-family="system-ui" font-size="10" fill="#fff">braking (dry road; at least double in the wet)</text></svg>`;
+}
+
+function twoSecond(): string {
+  return svg(
+    `<rect x="0" y="60" width="340" height="56" fill="#50545a"/>${centre(88)}
+    <rect x="200" y="30" width="5" height="30" fill="#ddd"/><rect x="194" y="22" width="18" height="12" rx="2" fill="#fff"/>
+    ${car(250, 102, '#2e5c8a', 0)}${car(110, 102, '#2f8a5f', 0)}
+    <path d="M134 128 L226 128" stroke="#ffd23f" stroke-width="3"/><polygon points="226,122 236,128 226,134" fill="#ffd23f"/>
+    <text x="150" y="146" ${T} font-size="13" fill="#fff">2 seconds</text>
+    <text x="12" y="20" ${T} font-size="13" fill="#fff">“Only a fool breaks the two-second rule”</text>
+    <text x="12" y="164" font-family="system-ui" font-size="11" fill="#fff">Wet road: at least 4 seconds. Icy: up to 20.</text>`,
+    'The two-second rule: when the car ahead passes a fixed point, you should take at least two seconds to reach it, four in the wet',
+    170
+  );
+}
+
+function laneDiscipline(): string {
+  return svg(
+    `<rect x="60" y="0" width="220" height="170" fill="#50545a"/>
+    ${[133, 206].map((x) => Array.from({ length: 8 }, (_, i) => `<rect x="${x - 1.5}" y="${i * 22}" width="3" height="10" fill="#eee"/>`).join('')).join('')}
+    <rect x="62" y="0" width="3" height="170" fill="#eee"/><rect x="275" y="0" width="3" height="170" fill="#eee"/>
+    <g transform="rotate(-90 100 130)">${car(100, 130, '#2f8a5f', 0)}</g>
+    <g transform="rotate(-90 170 70)">${car(170, 70, '#2e5c8a', 0)}</g>
+    <path d="M170 98 Q170 120 110 150" stroke="#ffd23f" stroke-width="3" fill="none" stroke-dasharray="6 4"/>
+    <text x="74" y="20" ${T} font-size="11" fill="#fff">Lane 1</text><text x="146" y="20" ${T} font-size="11" fill="#fff">Lane 2</text><text x="216" y="20" ${T} font-size="11" fill="#fff">Lane 3</text>
+    <text x="286" y="80" ${T} font-size="11" fill="#fff">Keep</text><text x="286" y="96" ${T} font-size="11" fill="#fff">left</text>
+    <text x="4" y="80" ${T} font-size="10" fill="#fff">Overtake</text><text x="4" y="94" ${T} font-size="10" fill="#fff">on the</text><text x="4" y="108" ${T} font-size="10" fill="#fff">right only</text>`,
+    'Lane discipline: keep in lane 1 unless overtaking, overtake on the right, then return to the left',
+    170
+  );
+}
+
+function overtakeDiagram(): string {
+  return svg(
+    `<rect x="0" y="40" width="340" height="96" fill="#50545a"/><rect x="0" y="86" width="340" height="3" fill="#eee" stroke-dasharray="8 6"/>
+    <rect x="150" y="98" width="110" height="28" rx="4" fill="#e9e6de"/><rect x="258" y="100" width="24" height="24" rx="3" fill="#1d4f9c"/>
+    ${car(70, 112, '#2f8a5f', 0)}
+    <path d="M94 112 Q130 112 150 66 L250 66 Q290 66 310 108" stroke="#ffd23f" stroke-width="3" fill="none" stroke-dasharray="6 4"/>
+    <text x="12" y="24" ${T} font-size="12" fill="#fff">1 Drop back  2 Mirrors, signal, glance  3 Pass briskly  4 Return</text>
+    <text x="12" y="158" font-family="system-ui" font-size="11" fill="#fff">Move back when you can see it in your interior mirror (rules 133, 163, 164)</text>`,
+    'Overtaking: drop back, check mirrors and signal, pass briskly, and return once you can see the overtaken vehicle in your mirror',
+    170
+  );
+}
+
+function motorwayJoin(): string {
+  return svg(
+    `<rect x="0" y="30" width="340" height="80" fill="#50545a"/><rect x="0" y="110" width="340" height="30" fill="#5d6064"/>
+    <rect x="0" y="69" width="340" height="2" fill="#eee"/>
+    <rect x="0" y="109" width="150" height="3" fill="#fff"/>${Array.from({ length: 8 }, (_, i) => `<rect x="${160 + i * 20}" y="109" width="10" height="3" fill="#fff"/>`).join('')}
+    ${car(260, 90, '#2e5c8a', 0)}${car(110, 125, '#2f8a5f', 0)}
+    <path d="M134 125 Q200 124 230 96" stroke="#ffd23f" stroke-width="3" fill="none" stroke-dasharray="6 4"/>
+    <text x="12" y="22" ${T} font-size="12" fill="#fff">Build speed, find a gap, join lane 1</text>
+    <text x="12" y="132" ${T} font-size="10" fill="#fff">Slip road</text><text x="16" y="104" ${T} font-size="10" fill="#fff">Solid: don’t cross</text>
+    <text x="12" y="160" font-family="system-ui" font-size="11" fill="#fff">Traffic on the motorway has priority (rule 259)</text>`,
+    'Joining a motorway: use the slip road to match speed, give priority to traffic in lane 1, and join where the line is broken',
+    170
+  );
+}
+
+function smartMotorway(): string {
+  const head = (x: number, inner: string) => `<g transform="translate(${x},30)"><rect width="52" height="52" rx="4" fill="#111"/>${inner}</g>`;
+  const lim = (n: number) => `<circle cx="26" cy="26" r="19" fill="none" stroke="#ff3b2f" stroke-width="4"/><text x="26" y="33" ${T} font-size="18" text-anchor="middle" fill="#fff">${n}</text>`;
+  return `<svg viewBox="0 0 340 170" role="img" aria-label="Smart motorway gantry: red X closes lane 1, 50 mph limits in red circles over the other lanes, an emergency area with an orange SOS sign"><rect width="340" height="170" rx="12" fill="#1f6f4a"/>
+    <rect x="40" y="22" width="200" height="6" fill="#6d737a"/>
+    ${head(184, `<path d="M12 12 L40 40 M40 12 L12 40" stroke="#ff3b2f" stroke-width="7"/>`)}${head(116, lim(50))}${head(48, lim(50))}
+    <text x="186" y="100" ${T} font-size="11" fill="#fff">Lane 1</text><text x="118" y="100" ${T} font-size="11" fill="#fff">Lane 2</text><text x="50" y="100" ${T} font-size="11" fill="#fff">Lane 3</text>
+    <text x="10" y="124" ${T} font-size="12" fill="#fff">Red X: lane closed. You MUST NOT drive in it.</text>
+    <text x="10" y="142" ${T} font-size="12" fill="#fff">Speed in a red circle: the law.</text>
+    <g transform="translate(266,36) scale(0.62)">${signSvg({ kind: 'emergency-area' }, 100).replace('<svg ', '<svg x="0" y="0" ')}</g>
+    <text x="10" y="162" font-family="system-ui" font-size="10.5" fill="#e8f3ec">Rules 258 and 261. Emergency areas: emergencies only (rule 270).</text></svg>`;
+}
+
+function nightLights(): string {
+  return `<svg viewBox="0 0 340 170" role="img" aria-label="Night driving: main beam on an empty road, dipped beam when another vehicle approaches"><rect width="340" height="170" rx="12" fill="#0a0f1c"/>
+    <rect x="0" y="40" width="340" height="40" fill="#24282e"/><rect x="0" y="110" width="340" height="40" fill="#24282e"/>
+    ${car(40, 60, '#2f8a5f', 0)}<path d="M62 52 L330 30 L330 90 L62 68 Z" fill="#fff4c8" opacity="0.35"/>
+    ${car(40, 130, '#2f8a5f', 0)}<path d="M62 124 L170 116 L170 144 L62 136 Z" fill="#fff4c8" opacity="0.35"/>
+    ${car(300, 124, '#9aa3ab', 180)}<circle cx="278" cy="118" r="4" fill="#fff6d8"/><circle cx="278" cy="130" r="4" fill="#fff6d8"/>
+    <text x="12" y="24" ${T} font-size="12" fill="#fff">Empty dark road: main beam</text>
+    <text x="12" y="104" ${T} font-size="12" fill="#fff">Someone coming, or ahead: dip</text>
+    <text x="12" y="164" font-family="system-ui" font-size="10.5" fill="#cfd8e3">You MUST NOT dazzle other road users (rule 114)</text></svg>`;
+}
+
+function devonRunMap(): string {
+  return `<svg viewBox="0 0 340 170" role="img" aria-label="The run to the coast: Combe Lane from Ashcombe, the A386, Okement Cross roundabout, the A30, the M5 past junctions 1 and 2, the smart section and off at junction 3 for Seaview"><rect width="340" height="170" rx="12" fill="#b9d89a"/>
+    <rect x="0" y="0" width="340" height="18" fill="#3f7f9a"/>
+    <path d="M30 150 L30 120 L60 120 L60 96 L100 96" stroke="#6b6e70" stroke-width="4" fill="none"/>
+    <path d="M100 160 L100 18" stroke="#50545a" stroke-width="8"/><circle cx="100" cy="112" r="7" fill="#7fb35a" stroke="#50545a" stroke-width="4"/>
+    <path d="M30 150 L30 120 L60 120 L60 96 L100 96 L100 26 L130 26" stroke="#ffd23f" stroke-width="3" fill="none" stroke-dasharray="6 4"/>
+    <circle cx="30" cy="150" r="5" fill="#2f8a5f"/>
+    <text x="38" y="160" ${T} font-size="10" fill="#1d2a1d">Ashcombe</text><text x="66" y="116" ${T} font-size="9.5" fill="#1d2a1d">Combe Lane</text>
+    <text x="108" y="140" ${T} font-size="10" fill="#1d2a1d">A386</text><text x="108" y="104" ${T} font-size="10" fill="#1d2a1d">A30</text>
+    <text x="108" y="70" ${T} font-size="10" fill="#1d4f9c">M5 · J1 · J2 · smart</text><text x="134" y="30" ${T} font-size="10" fill="#1d2a1d">J3 → Seaview</text>
+    <text x="210" y="100" font-family="system-ui" font-size="11" fill="#1d2a1d">Rain all the way:</text><text x="210" y="116" font-family="system-ui" font-size="11" fill="#1d2a1d">wipers, dipped lights,</text><text x="210" y="132" font-family="system-ui" font-size="11" fill="#1d2a1d">four-second gaps</text></svg>`;
 }

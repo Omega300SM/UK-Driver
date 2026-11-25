@@ -390,6 +390,120 @@ export const FAULTS = {
     message: 'The clock ran out before we reached the finish. Steady progress is the trick: no dawdling on clear roads, and no rushing junctions either.',
     rules: []
   },
+  'tailgating': {
+    severity: 'minor',
+    category: 'Following distance',
+    message: 'We were too close to the vehicle in front. Leave at least a two-second gap on fast roads: watch them pass a sign, then count.',
+    rules: [126]
+  },
+  'tailgating-wet': {
+    severity: 'minor',
+    category: 'Following distance',
+    message: 'Too close for the wet. Stopping distances at least double in the rain, so double the gap: four seconds or more.',
+    rules: [126, 227]
+  },
+  'tailgating-serious': {
+    severity: 'serious',
+    category: 'Following distance',
+    message: 'We were right up behind them, under a second. If they’d braked hard, we’d have hit them.',
+    rules: [126]
+  },
+  'lane-change-mirror': {
+    severity: 'minor',
+    category: 'Use of mirrors – changing lanes',
+    message: 'We changed lanes without checking the mirrors first. Mirrors, and a quick sideways glance if needed, before every lane change.',
+    rules: [133, 267]
+  },
+  'lane-change-signal': {
+    severity: 'minor',
+    category: 'Signals – changing lanes',
+    message: 'No signal for that lane change. Signal in good time so others know what you’re doing.',
+    rules: [133]
+  },
+  'lane-hogging': {
+    severity: 'minor',
+    category: 'Positioning – lane discipline',
+    message: 'We stayed out in the right-hand lane with the left lane clear. Once you’ve overtaken, move back to the left when it’s safe.',
+    rules: [137, 264]
+  },
+  'undertake': {
+    severity: 'minor',
+    category: 'Overtaking',
+    message: 'We passed that vehicle on its left. Overtake on the right; don’t move to a lane on your left to get past.',
+    rules: [268]
+  },
+  'slip-solid-line': {
+    severity: 'minor',
+    category: 'Joining the motorway',
+    message: 'We crossed the solid white line from the slip road. Wait until the line is broken before moving across.',
+    rules: [259]
+  },
+  'merge-cut-in': {
+    severity: 'serious',
+    category: 'Joining the motorway',
+    message: 'We joined right in front of a car already in lane 1. Traffic on the motorway has priority: match their speed and slot into a gap.',
+    rules: [259]
+  },
+  'merge-slow': {
+    severity: 'minor',
+    category: 'Joining the motorway',
+    message: 'We joined much slower than the traffic. Use the slip road to build up speed so you fit into the flow.',
+    rules: [259]
+  },
+  'hard-shoulder': {
+    severity: 'serious',
+    category: 'Motorway – hard shoulder',
+    message: 'We drove along the hard shoulder. You MUST NOT use it except in an emergency, or when signs or the police tell you to.',
+    rules: [269]
+  },
+  'red-x': {
+    severity: 'serious',
+    category: 'Motorway – red X',
+    message: 'We drove in a lane closed by a red X. You MUST NOT: there could be a broken-down car or people in it. Move over when the signs tell you.',
+    rules: [258]
+  },
+  'wrong-way': {
+    severity: 'dangerous',
+    category: 'Direction of travel',
+    message: 'We were driving against the traffic on a one-way carriageway. I had to stop the drive.',
+    rules: [263]
+  },
+  'motorway-stop': {
+    severity: 'serious',
+    category: 'Motorway – stopping',
+    message: 'We stopped on the motorway with no reason to. You MUST NOT stop except in an emergency, in a queue, or when signs or the police tell you to.',
+    rules: [271]
+  },
+  'motorway-reverse': {
+    severity: 'serious',
+    category: 'Motorway – reversing',
+    message: 'We reversed on the motorway. You MUST NOT, even on a slip road or the hard shoulder. Missed your exit? Carry on to the next one.',
+    rules: [263]
+  },
+  'bend-speed': {
+    severity: 'minor',
+    category: 'Control – speed for the road',
+    message: 'That was too fast for the bend. On country lanes, slow down before bends: you need to be able to stop in the distance you can see.',
+    rules: [154]
+  },
+  'no-lights-dark': {
+    severity: 'serious',
+    category: 'Lights – darkness',
+    message: 'We drove in the dark without headlights. On unlit roads at night you need them on.',
+    rules: [113]
+  },
+  'no-lights-fog': {
+    severity: 'serious',
+    category: 'Lights – poor visibility',
+    message: 'We drove into thick fog without headlights. You MUST use headlights when you can’t see more than about 100 metres.',
+    rules: [226]
+  },
+  'dazzle': {
+    severity: 'minor',
+    category: 'Lights – dazzle',
+    message: 'We kept main beam on with another car close by. Dip your headlights for oncoming traffic and when you’re following someone.',
+    rules: [114, 115]
+  },
   'not-secured': {
     severity: 'minor',
     category: 'Control – securing the car',

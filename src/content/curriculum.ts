@@ -13,6 +13,13 @@ import { day11 } from './lessons/day11';
 import { day12 } from './lessons/day12';
 import { day13 } from './lessons/day13';
 import { day14 } from './lessons/day14';
+import { day15 } from './lessons/day15';
+import { day16 } from './lessons/day16';
+import { day17 } from './lessons/day17';
+import { day18 } from './lessons/day18';
+import { day19 } from './lessons/day19';
+import { day20 } from './lessons/day20';
+import { day21 } from './lessons/day21';
 
 export const WORLDS: WorldInfo[] = [
   { id: 1, name: 'Foundations', tagline: 'Controls, the left, signs and junctions', pin: { x: 112, y: 172 }, place: 'Little Ashby, Leicestershire' },
@@ -54,7 +61,7 @@ const titles: Array<[number, 1 | 2 | 3 | 4, string, boolean?]> = [
   [30, 4, 'Graduation']
 ];
 
-const LESSONS: Record<number, LessonContent> = { 1: day01, 2: day02, 3: day03, 4: day04, 5: day05, 6: day06, 7: day07, 8: day08, 9: day09, 10: day10, 11: day11, 12: day12, 13: day13, 14: day14 };
+const LESSONS: Record<number, LessonContent> = { 1: day01, 2: day02, 3: day03, 4: day04, 5: day05, 6: day06, 7: day07, 8: day08, 9: day09, 10: day10, 11: day11, 12: day12, 13: day13, 14: day14, 15: day15, 16: day16, 17: day17, 18: day18, 19: day19, 20: day20, 21: day21 };
 
 export const CURRICULUM: CurriculumDay[] = titles.map(([day, world, title, boss]) => ({
   day,
