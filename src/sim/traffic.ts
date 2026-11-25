@@ -145,7 +145,8 @@ export class Traffic {
     const limit = speedLimitAt(this.layout, pos.x, pos.z) / MPH_PER_MPS;
     const car = this.add({ x: pos.x, z: pos.z, heading: pos.heading, speed: limit > FAST ? limit * 0.8 : 6, looping: true, colour, kind: lorry ? 'lorry' : 'car' });
     car.maxSpeed = undefined;
-    car.pace = lorry ? 0.76 : 0.84 + this.rnd() * 0.14;
+    // Only the long fast-road maps vary pace (town maps keep their random sequence, and so their traffic).
+    if (this.layout.aiNearPlayer) car.pace = lorry ? 0.76 : 0.84 + this.rnd() * 0.14;
     car.path = path;
     car.s = s0;
     return car;
@@ -202,7 +203,8 @@ export class Traffic {
     const fz = Math.cos(c.heading);
     const limit = speedLimitAt(this.layout, c.x, c.z) / MPH_PER_MPS;
     const rb = path.yieldTo ? this.layout.roundabouts?.find((r) => r.id === path.yieldTo) : undefined;
-    const fast = limit > FAST;
+    // Fast-road behaviour (time-gap following, no town cap) only on the long fast-road maps.
+    const fast = limit > FAST && !!this.layout.aiNearPlayer;
     c.cruise = Math.min(limit * (c.pace ?? 0.85), fast ? Infinity : 15, rb ? (rb.mini ? 5 : 7.5) : Infinity);
 
     // Gap to whatever is ahead (cars or the player), measured along our own

@@ -626,11 +626,11 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
         // Scripted driver keeps a safe distance from AI cars ahead (two-second-ish gap).
         const [afx, afz] = car.forward;
         const wetGap = conds.state().wet;
-        const look = Math.max(40, Math.abs(car.speed) * (wetGap ? 4.4 : 2.3) + 20);
-        let gap = Infinity;
         // ...and doesn't pass slower traffic on its left on a dual carriageway or motorway (rule 268).
         let rightLaneV = Infinity;
         const onCw = !!carriagewayAt(L, car.x, car.z);
+        const look = onCw ? Math.max(40, Math.abs(car.speed) * (wetGap ? 4.4 : 2.3) + 20) : 40;
+        let gap = Infinity;
         for (const c of traffic.cars) {
           const dx = c.x - car.x;
           const dz = c.z - car.z;
@@ -658,7 +658,9 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
           }
         }
         // Two-second rule (rule 126), doubled in the wet (rule 227).
-        const safe = 3 + Math.abs(car.speed) * (conds.state().wet ? 4.4 : 2.3);
+        // In town (30 mph or less) it follows closer, as town traffic does at low speed.
+        const townRoad = speedLimitAt(L, car.x, car.z) <= 30;
+        const safe = 3 + Math.abs(car.speed) * (conds.state().wet ? 4.4 : townRoad ? 1.6 : 2.3);
         if (gap < safe) {
           ap.throttle = 0;
           ap.brake = Math.max(ap.brake, gap < 2.5 ? 0.6 : Math.min(0.45, (safe - gap) * 0.12));
@@ -1162,7 +1164,12 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
           const poll = () => {
             // Cars queued behind us can't be the traffic we're waiting for.
             const [fx, fz] = car.forward;
-            const behind = (c: { x: number; z: number }) => (c.x - car.x) * fx + (c.z - car.z) * fz < -2;
+            const behind = (c: { x: number; z: number; heading: number }) => {
+              const dx = c.x - car.x;
+              const dz = c.z - car.z;
+              const sameWay = Math.sin(c.heading) * fx + Math.cos(c.heading) * fz > 0.8;
+              return dx * fx + dz * fz < -2 && Math.abs(dx * fz - dz * fx) < 2.5 && sameWay;
+            };
             const gap = Math.min(...st.waitGap.map(([x, z]) => traffic.timeToReach(x, z, behind)));
             return gap > need ? nextStep() : script.at(0.2, poll);
           };

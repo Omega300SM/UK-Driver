@@ -96,7 +96,9 @@ export class Car {
       if (this.handbrake) drive *= 0.12;
       if (this.gear === 'R' && v < -3) drive = 0;
       v += dir * drive * dt;
-      v = toward(v, 0, (0.12 + 0.0028 * v * v) * dt);
+      // Rolling and air drag: town figures below 18 m/s (40 mph), a little less above so the car reaches motorway speeds.
+      const lo = Math.min(Math.abs(v), 18);
+      v = toward(v, 0, (0.12 + 0.0035 * lo * lo + 0.0028 * (v * v - lo * lo)) * dt);
       v = toward(v, 0, (input.brake * 8.5 * this.grip + (this.handbrake ? 4 : 0)) * dt);
     }
     v = Math.max(-4, Math.min(32, v));
