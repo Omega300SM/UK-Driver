@@ -25,6 +25,11 @@ export function signAspect(kind: SignKind): number {
   if (kind === 'roundabout-map') return 1.4;
   if (kind === 'warn-giveway-ahead') return 0.86;
   if (kind === 'bus-lane') return 0.8;
+  if (kind === 'passing-place') return 1.7;
+  if (kind === 'direction') return 2.4;
+  if (kind === 'countdown') return 0.42;
+  if (kind === 'motorway' || kind === 'motorway-end') return 1;
+  if (kind === 'emergency-area') return 0.8;
   return 1;
 }
 
@@ -134,6 +139,47 @@ function body(spec: SignSpec): string {
         <line x1="${cx}" y1="96" x2="${cx}" y2="${cy + 11}" stroke="#111" stroke-width="7"/>
         <circle cx="${cx}" cy="${cy}" r="10" fill="none" stroke="#111" stroke-width="6"/>${arms}`;
     }
+    case 'warn-bend':
+      // Road bends to the right (sharp bend warning).
+      return triangle(`<path d="M44 80 L44 58 Q44 46 56 46 L60 46" stroke="#111" stroke-width="7" fill="none"/><polygon points="58,38 70,46 58,54" fill="#111"/>`);
+    case 'dual-ahead':
+      // Dual carriageway ahead: two arrows either side of a central reserve.
+      return triangle(`<path d="M40 80 L40 46 M60 80 L60 46" stroke="#111" stroke-width="7"/><polygon points="33,50 40,38 47,50" fill="#111"/><polygon points="53,50 60,38 67,50" fill="#111"/><rect x="48" y="56" width="4" height="24" fill="#111"/>`);
+    case 'passing-place':
+      return `<rect x="3" y="12" width="164" height="76" rx="5" fill="#fff" stroke="#111" stroke-width="4"/>
+        <text x="85" y="46" font-family="${FONT}" font-weight="700" font-size="26" text-anchor="middle" fill="#111">Passing</text>
+        <text x="85" y="76" font-family="${FONT}" font-weight="700" font-size="26" text-anchor="middle" fill="#111">place</text>`;
+    case 'motorway':
+    case 'motorway-end': {
+      // Motorway symbol: carriageways meeting under a bridge.
+      const end = spec.kind === 'motorway-end';
+      return `<rect x="2" y="2" width="96" height="96" rx="8" fill="#1d4f9c" stroke="#fff" stroke-width="3"/>
+        <rect x="14" y="26" width="72" height="9" fill="#fff"/>
+        <path d="M24 86 L42 40 M76 86 L58 40" stroke="#fff" stroke-width="7" fill="none"/>
+        <path d="M50 86 L50 74 M50 64 L50 54" stroke="#fff" stroke-width="4"/>
+        ${end ? `<line x1="12" y1="88" x2="88" y2="12" stroke="${RED}" stroke-width="9"/>` : ''}`;
+    }
+    case 'countdown': {
+      // Blue board with 1–3 diagonal white bars (300, 200, 100 yards to the exit).
+      const n = Math.max(1, Math.min(3, spec.value ?? 3));
+      let bars = '';
+      for (let i = 0; i < n; i++) bars += `<polygon points="6,${74 - i * 26} 36,${54 - i * 26} 36,${66 - i * 26} 6,${86 - i * 26}" fill="#fff"/>`;
+      return `<rect x="1" y="1" width="40" height="98" fill="#1d4f9c" stroke="#fff" stroke-width="2"/>${bars}`;
+    }
+    case 'direction': {
+      // Direction board: blue on motorways (value 1), green on primary roads (value 2), white elsewhere.
+      const fill = spec.value === 1 ? '#1d4f9c' : spec.value === 2 ? '#15623e' : '#fff';
+      const ink = spec.value === 1 || spec.value === 2 ? '#fff' : '#111';
+      const lines = (spec.text ?? '').split('|');
+      return `<rect x="3" y="3" width="234" height="94" rx="6" fill="${fill}" stroke="${ink}" stroke-width="4"/>
+        ${lines.map((l, i) => `<text x="120" y="${(lines.length === 1 ? 62 : 44 + i * 34)}" font-family="${FONT}" font-weight="700" font-size="${lines.length === 1 ? 34 : 28}" text-anchor="middle" fill="${spec.value === 2 && i === 0 ? '#ffd23f' : ink}">${esc(l)}</text>`).join('')}`;
+    }
+    case 'emergency-area':
+      return `<rect x="2" y="2" width="76" height="96" rx="6" fill="#1d4f9c" stroke="#fff" stroke-width="3"/>
+        <rect x="18" y="14" width="44" height="40" rx="5" fill="#f28c1b"/>
+        <path d="M30 26 Q40 18 50 26 L48 30 L44 28 L44 42 L36 42 L36 28 L32 30 Z" fill="#fff"/>
+        <text x="40" y="74" font-family="${FONT}" font-weight="700" font-size="11" text-anchor="middle" fill="#fff">Emergency</text>
+        <text x="40" y="88" font-family="${FONT}" font-weight="700" font-size="11" text-anchor="middle" fill="#fff">area</text>`;
     case 'warn-school':
       // Two children walking.
       return triangle(`<circle cx="42" cy="40" r="5" fill="#111"/><circle cx="60" cy="44" r="4.2" fill="#111"/>
@@ -195,6 +241,22 @@ export function signName(spec: SignSpec): string {
       return 'Traffic signals ahead';
     case 'warn-school':
       return 'Children going to or from school';
+    case 'warn-bend':
+      return 'Bend to the right ahead';
+    case 'dual-ahead':
+      return 'Dual carriageway ahead';
+    case 'passing-place':
+      return 'Passing place';
+    case 'motorway':
+      return 'Start of motorway regulations';
+    case 'motorway-end':
+      return 'End of motorway regulations';
+    case 'countdown':
+      return `Countdown marker: ${(spec.value ?? 3) * 100} yards to the exit`;
+    case 'direction':
+      return (spec.text ?? 'Direction sign').replace(/\|/g, ', ');
+    case 'emergency-area':
+      return 'Emergency area ahead (SOS telephone)';
     case 'warn-pedestrians':
       return 'Pedestrian crossing ahead';
     case 'bus-lane':

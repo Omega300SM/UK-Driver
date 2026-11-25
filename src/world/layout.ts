@@ -40,7 +40,7 @@ export interface Lane extends Rect {
   name?: string;
 }
 
-export type LineKind = 'centre' | 'hazard' | 'double-solid' | 'edge' | 'giveway' | 'stop' | 'double-yellow' | 'single-yellow';
+export type LineKind = 'centre' | 'lane' | 'hazard' | 'double-solid' | 'edge' | 'giveway' | 'stop' | 'double-yellow' | 'single-yellow';
 
 /** A painted line from (x0,z0) to (x1,z1). */
 export interface Marking {
@@ -69,6 +69,14 @@ export type SignKind =
   | 'roundabout-map'
   | 'warn-signals'
   | 'warn-school'
+  | 'warn-bend'
+  | 'passing-place'
+  | 'motorway'
+  | 'motorway-end'
+  | 'countdown'
+  | 'direction'
+  | 'emergency-area'
+  | 'dual-ahead'
   | 'warn-pedestrians'
   | 'bus-lane'
   | 'name';
@@ -144,6 +152,8 @@ export interface AiPath {
   spawn?: boolean;
   /** Give way before starting this path (joining a main road from a side road). */
   giveWay?: boolean;
+  /** Lorries use this path too (the left-hand lane of a fast road). */
+  heavy?: boolean;
 }
 
 /**
@@ -197,6 +207,30 @@ export interface BoxJunction extends Rect {
   id: string;
 }
 
+/**
+ * A one-way, multi-lane carriageway along the z axis (dual carriageways,
+ * motorways and slip roads). Lane 1 is the left-hand lane: for traffic
+ * heading +z that's the highest x, for traffic heading −z the lowest.
+ */
+export interface Carriageway extends Rect {
+  id: string;
+  kind: 'dual' | 'motorway' | 'slip';
+  /** Direction of travel: 0 (+z) or π (−z). */
+  heading: number;
+  lanes: number;
+  laneWidth: number;
+  name?: string;
+}
+
+/** An overhead gantry with one signal per lane (lane 1 first). */
+export interface Gantry {
+  z: number;
+  /** Carriageway it spans. */
+  carriageway: string;
+  signs: Array<GantrySign>;
+}
+export type GantrySign = { kind: 'limit'; mph: number } | { kind: 'x' } | { kind: 'arrow' } | { kind: 'nsl' } | { kind: 'blank' };
+
 /** A bus lane (rule 141): traffic heading `heading` should keep out. */
 export interface BusLane extends Rect {
   heading: number;
@@ -231,6 +265,23 @@ export interface SceneLayout {
   crossings?: Crossing[];
   signals?: SignalController[];
   boxes?: BoxJunction[];
+  /** One-way multi-lane carriageways (dual carriageways, motorways, slip roads). */
+  carriageways?: Carriageway[];
+  /** Hard shoulders: emergencies only (rule 269). */
+  hardShoulders?: Rect[];
+  /** Lanes closed by a red X (rule 258). */
+  closedLanes?: Rect[];
+  gantries?: Gantry[];
+  /** Solid white lines you mustn't cross between a slip road and the motorway (rule 259): crossing x between z0 and z1. */
+  solidMerges?: Array<{ x: number; z0: number; z1: number }>;
+  /** Places to slow right down (sharp bends on country lanes, rule 154). */
+  slowZones?: Array<Rect & { mph: number }>;
+  /** Banks of fog (visibility under 100 m, rule 226). */
+  fogZones?: Rect[];
+  /** Long, open maps: keep AI traffic around the player rather than spread over the whole map. */
+  aiNearPlayer?: boolean;
+  /** Areas where motorway rules apply (no stopping, no reversing: rules 263, 271). */
+  motorways?: Rect[];
   /** School Keep Clear zig-zags (no stopping: rule 243). */
   schoolZigzags?: Rect[];
   /** Off-road car parks (turns inside them aren't judged as road turns). */
@@ -319,4 +370,21 @@ export function wrongSideBy(layout: SceneLayout, x: number, z: number, heading: 
 export function laneAt(layout: SceneLayout, x: number, z: number): Lane | null {
   for (const lane of layout.lanes) if (inRect(lane, x, z)) return lane;
   return null;
+}
+
+/** The one-way carriageway (if any) at a point. */
+export function carriagewayAt(layout: SceneLayout, x: number, z: number): Carriageway | null {
+  for (const c of layout.carriageways ?? []) if (inRect(c, x, z)) return c;
+  return null;
+}
+
+/** Lane number (1 = left-hand lane) of a point on a carriageway. */
+export function laneNumber(c: Carriageway, x: number): number {
+  const fromLeft = c.heading === 0 ? c.x1 - x : x - c.x0;
+  return Math.max(1, Math.min(c.lanes, Math.floor(fromLeft / c.laneWidth) + 1));
+}
+
+/** Centre x of lane n (1 = left) on a carriageway. */
+export function laneCentre(c: Carriageway, n: number): number {
+  return c.heading === 0 ? c.x1 - (n - 0.5) * c.laneWidth : c.x0 + (n - 0.5) * c.laneWidth;
 }

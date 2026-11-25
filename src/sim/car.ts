@@ -32,6 +32,8 @@ export class Car {
   readonly width = 1.8;
   readonly wheelbase = 2.6;
   readonly maxSteer = 0.62;
+  /** Tyre grip: 1 on a dry road, less in the wet (braking distances grow, rule 227). */
+  grip = 1;
 
   reset(x: number, z: number, heading: number): void {
     this.x = x;
@@ -94,8 +96,8 @@ export class Car {
       if (this.handbrake) drive *= 0.12;
       if (this.gear === 'R' && v < -3) drive = 0;
       v += dir * drive * dt;
-      v = toward(v, 0, (0.12 + 0.0035 * v * v) * dt);
-      v = toward(v, 0, (input.brake * 8.5 + (this.handbrake ? 4 : 0)) * dt);
+      v = toward(v, 0, (0.12 + 0.0028 * v * v) * dt);
+      v = toward(v, 0, (input.brake * 8.5 * this.grip + (this.handbrake ? 4 : 0)) * dt);
     }
     v = Math.max(-4, Math.min(32, v));
 

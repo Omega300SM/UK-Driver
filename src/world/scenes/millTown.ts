@@ -275,7 +275,7 @@ export function buildMillTown(): BuiltScene {
   return { layout: L, root, markers: mk.markers, setMarker: mk.setMarker, setHintPath: hintPathFactory(root), update: mk.update, updateStreet: street.update };
 }
 
-function addRoundabout(root: THREE.Group, rb: Roundabout): void {
+export function addRoundabout(root: THREE.Group, rb: Roundabout): void {
   const disc = new THREE.Mesh(new THREE.CircleGeometry(rb.outer + 0.3, 48), lambert(0x4e5257));
   disc.rotation.x = -Math.PI / 2;
   disc.position.set(rb.x, 0.004, rb.z);

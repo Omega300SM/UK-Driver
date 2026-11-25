@@ -117,6 +117,10 @@ export function addMarkings(root: THREE.Group, ms: Marking[]): void {
       case 'hazard':
         dashes(6, 2, 0.14);
         break;
+      case 'lane':
+        // Motorway / dual carriageway lane line: short dashes, long gaps.
+        dashes(2, 7, 0.12);
+        break;
       case 'double-solid':
         solid(0.12, 0.16);
         solid(0.12, -0.16);

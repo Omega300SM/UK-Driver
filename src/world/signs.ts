@@ -8,7 +8,7 @@ import { signAspect, signSvg, type SignSpec } from './signSvg';
  */
 const cache = new Map<string, THREE.Texture>();
 
-function canvasTexture(key: string, w: number, h: number, draw: (c: CanvasRenderingContext2D) => void): THREE.Texture {
+export function canvasTexture(key: string, w: number, h: number, draw: (c: CanvasRenderingContext2D) => void): THREE.Texture {
   const hit = cache.get(key);
   if (hit) return hit;
   const cv = document.createElement('canvas');

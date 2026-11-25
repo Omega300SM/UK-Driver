@@ -3,6 +3,8 @@ import type { Traffic } from './traffic';
 import type { Recorder } from '../rules/recorder';
 import type { StreetControl } from './street';
 import { ROAD_USER_SIZE } from './traffic';
+import { carriagewayAt, laneNumber } from '../world/layout';
+import type { LightsState } from '../world/conditions';
 import type { DriveEvent, SignalState } from '../rules/types';
 import { mph } from '../rules/types';
 import { angleDiff } from '../rules/checks';
@@ -52,7 +54,7 @@ export class RoadAnalyser {
     }
     // Overtaking a cyclist or horse rider counts as passing something on our side (rule 163).
     for (const c of traffic.cars) {
-      if ((c.kind ?? 'car') === 'car') continue;
+      if (c.kind !== 'bike' && c.kind !== 'horse') continue;
       const dx = c.x - car.x;
       const dz = c.z - car.z;
       const along = dx * fx + dz * fz;
@@ -224,6 +226,115 @@ export class RoadAnalyser {
     emit({ type: 'turn', t, dir: turnDh > 0 ? 'left' : 'right', startT: startF.t, signalAtStart: startF.signal });
   }
 
+  // ---------- Fast roads: lanes, gaps, motorway rules, lights (Week 3) ----------
+  private lastCw: { id: string; lane: number; kind: string } | null = null;
+  private passingRight = new Map<number, number>();
+  private reversedOnMotorway = false;
+  fastRoads(t: number, lights: LightsState, cond: { dark: boolean; wet: boolean; poorVisibility: boolean }, emit: Emit) {
+    const { L, car, traffic } = this;
+    const [fx, fz] = car.forward;
+    const [rx, rz] = car.right;
+    const v = Math.abs(car.speed);
+    const cw = carriagewayAt(L, car.x, car.z);
+    const laneNo = cw && Math.cos(car.heading - cw.heading) > 0.5 ? laneNumber(cw, car.x) : null;
+
+    // Vehicles around us, in our frame (along = ahead, across = to our right).
+    const rel = traffic.cars.map((c) => {
+      const dx = c.x - car.x;
+      const dz = c.z - car.z;
+      return { c, along: dx * fx + dz * fz, across: dx * rx + dz * rz, same: Math.cos(c.heading - car.heading) > 0.7, opposite: Math.cos(c.heading - car.heading) < -0.7, len: ROAD_USER_SIZE[c.kind ?? 'car'].len };
+    });
+    // Time gap to the vehicle ahead in our lane (rule 126).
+    let gapM = Infinity;
+    let ahead: (typeof rel)[number] | null = null;
+    for (const o of rel) {
+      if (!o.same || Math.abs(o.across) > 1.7 || o.along <= 0) continue;
+      const g = o.along - o.len / 2 - car.length / 2;
+      if (g < gapM) {
+        gapM = g;
+        ahead = o;
+      }
+    }
+    const followGapS = v > 8 && gapM < 160 ? Math.max(0, gapM) / v : null;
+    const overtaking = !!ahead && gapM < 120 && ahead.c.speed < v - 1;
+
+    // Lane discipline: is the lane to our left clear for a good way ahead?
+    let leftLaneClear = false;
+    if (cw && laneNo && laneNo > 1) {
+      leftLaneClear = !rel.some((o) => o.same && o.across < -1.9 && o.across > -1.9 - cw.laneWidth * 1.2 && o.along > -25 && o.along < 140);
+    }
+
+    // Lane changes and merges.
+    if (cw && laneNo && v > 3) {
+      const now = { id: cw.id, lane: laneNo, kind: cw.kind };
+      const prev = this.lastCw;
+      if (prev && (prev.id !== now.id || prev.lane !== now.lane)) {
+        const sideways = prev.id === now.id ? (now.lane > prev.lane ? 'right' : 'left') : cw.kind === 'slip' ? 'left' : 'right';
+        emit({ type: 'laneChange', t, dir: sideways, from: `${prev.id}:${prev.lane}`, to: `${now.id}:${now.lane}` });
+        if (prev.kind === 'slip' && cw.kind !== 'slip') {
+          // Joining from a slip road (rule 259): who's coming up behind in lane 1, and how close is the car ahead?
+          let ttcBehind = Infinity;
+          let gapAhead = Infinity;
+          for (const o of rel) {
+            if (!o.same || Math.abs(o.across) > 1.9) continue;
+            if (o.along < 0) {
+              const closing = o.c.speed - v;
+              const gap = -o.along - o.len / 2 - car.length / 2;
+              if (closing > 0.3) ttcBehind = Math.min(ttcBehind, Math.max(0, gap) / closing);
+              else if (gap < 2) ttcBehind = 0;
+            } else gapAhead = Math.min(gapAhead, o.along - o.len / 2 - car.length / 2);
+          }
+          const solid = (L.solidMerges ?? []).some((m) => car.z >= m.z0 && car.z <= m.z1);
+          emit({ type: 'merge', t, ttcBehind, gapAhead, speed: v, crossedSolid: solid });
+        }
+      }
+      this.lastCw = now;
+    } else if (!cw) this.lastCw = null;
+
+    // Undertaking: going past a moving vehicle that's in the lane to our right (rule 268).
+    if (cw && cw.kind !== 'slip') {
+      for (const o of rel) {
+        if (!o.same || o.across < 1.9 || o.across > 1.9 + cw.laneWidth * 1.3 || o.c.speed < 12) continue;
+        const was = this.passingRight.get(o.c.id);
+        if (was !== undefined && was < 0 && o.along < -o.len / 2 - 2 && v > o.c.speed + 1.5) emit({ type: 'undertake', t });
+        this.passingRight.set(o.c.id, o.along);
+      }
+    }
+
+    const inRectAny = (rs: Rect[] | undefined) => (rs ?? []).some((r) => inRect(r, car.x, car.z));
+    const onMotorway = inRectAny(L.motorways);
+    if (onMotorway && car.speed < -0.5 && !this.reversedOnMotorway) {
+      this.reversedOnMotorway = true;
+      emit({ type: 'motorwayReverse', t });
+    }
+    if (car.speed >= 0) this.reversedOnMotorway = false;
+    const queue = !!ahead && gapM < 40;
+    const slow = (L.slowZones ?? []).find((r) => inRect(r, car.x, car.z));
+    // Dazzle: main beam with someone close ahead, or oncoming on a two-way road (rules 114, 115).
+    const twoWay = !cw;
+    const dazzling =
+      lights === 'main' &&
+      (cond.dark || cond.poorVisibility) &&
+      rel.some((o) => (o.same && o.along > 0 && o.along < 70 && Math.abs(o.across) < 4) || (twoWay && o.opposite && o.along > 0 && o.along < 160 && Math.abs(o.across) < 10));
+    return {
+      followGapS,
+      laneNo,
+      leftLaneClear,
+      overtaking,
+      inHardShoulder: v > 3 && inRectAny(L.hardShoulders),
+      inClosedLane: v > 3 && inRectAny(L.closedLanes),
+      onMotorway,
+      wrongWayCarriageway: !!cw && v > 2 && Math.cos(car.heading - cw.heading) < -0.5,
+      slowZoneMph: slow ? slow.mph : null,
+      stoppedOnMotorway: onMotorway && v < 0.5 && !queue,
+      lights,
+      dark: cond.dark,
+      wet: cond.wet,
+      poorVisibility: cond.poorVisibility,
+      dazzling
+    };
+  }
+
   // ---------- Overtaking cyclists and horse riders (rules 163, 212, 215) ----------
   private passing = new Map<number, { minGap: number; maxSpeed: number; alongside: boolean }>();
   vulnerable(t: number, emit: Emit): void {
@@ -232,7 +343,7 @@ export class RoadAnalyser {
     const [rx, rz] = car.right;
     for (const c of traffic.cars) {
       const kind = c.kind ?? 'car';
-      if (kind === 'car') continue;
+      if (kind !== 'bike' && kind !== 'horse') continue;
       const size = ROAD_USER_SIZE[kind];
       const dx = c.x - car.x;
       const dz = c.z - car.z;

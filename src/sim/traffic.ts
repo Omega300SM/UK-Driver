@@ -30,6 +30,8 @@ export interface AiCar {
   kind?: RoadUserKind;
   /** When it arrived at the give way it's waiting at (first come, first served). */
   waitSince?: number;
+  /** Fraction of the speed limit it likes to drive at (fast roads). */
+  pace?: number;
   /** Never faster than this (cyclists, horses). */
   maxSpeed?: number;
 }
@@ -38,8 +40,13 @@ export interface AiCar {
 export const ROAD_USER_SIZE: Record<RoadUserKind, { len: number; wid: number }> = {
   car: { len: 4.2, wid: 1.8 },
   bike: { len: 1.8, wid: 0.6 },
-  horse: { len: 2.6, wid: 0.9 }
+  horse: { len: 2.6, wid: 0.9 },
+  lorry: { len: 12, wid: 2.5 },
+  tractor: { len: 5.5, wid: 2.3 }
 };
+const sizeOf = (c: AiCar) => ROAD_USER_SIZE[c.kind ?? 'car'];
+/** Speeds above this (m/s, 30 mph) count as a fast road: time-gap following, no town speed cap. */
+const FAST = 13.5;
 
 export interface PlayerShape {
   x: number;
@@ -51,7 +58,6 @@ export interface PlayerShape {
 
 const COLOURS = [0x2e5c8a, 0xb8352f, 0xe8e4da, 0x3c3f44, 0x6b8f3a, 0xd9a22e, 0x7a4f9a, 0x9aa3ab, 0x1c1c1c, 0xc9c2b0];
 const LEN = 4.2;
-const WID = 1.8;
 const X_MIN = -415;
 const X_MAX = 255;
 
@@ -75,13 +81,21 @@ export class Traffic {
     private layout: SceneLayout,
     level: TrafficLevel,
     scripted: ScriptedCar[] = [],
-    seed = 3
+    seed = 3,
+    near?: { x: number; z: number }
   ) {
     this.pending = [...scripted];
     const n = level === 'busy' ? 7 : level === 'light' ? 4 : 0;
     let s = seed;
     const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
     this.rnd = rnd;
+    if (layout.aiPaths?.length && layout.aiNearPlayer) {
+      // Long maps: populate the roads around the player.
+      this.target = n * 2;
+      const at = near ?? layout.start;
+      for (let i = 0; i < this.target * 4 && this.cars.length < this.target; i++) this.spawnNear(at, 60, 500);
+      return;
+    }
     if (layout.aiPaths?.length) {
       // Path-following traffic: spread cars over the non-roundabout paths.
       this.target = n * 2;
@@ -126,11 +140,29 @@ export class Traffic {
   private addOnPath(path: AiPath, s0 = 0, colour?: number): AiCar | null {
     const pos = pointAt(path, s0);
     // Don't spawn on top of anything.
-    if (this.cars.some((o) => Math.hypot(o.x - pos.x, o.z - pos.z) < 10)) return null;
-    const car = this.add({ x: pos.x, z: pos.z, heading: pos.heading, speed: 6, looping: true, colour });
+    if (this.cars.some((o) => Math.hypot(o.x - pos.x, o.z - pos.z) < (this.layout.aiNearPlayer ? 30 : 10))) return null;
+    const lorry = !!path.heavy && this.rnd() < 0.3;
+    const limit = speedLimitAt(this.layout, pos.x, pos.z) / MPH_PER_MPS;
+    const car = this.add({ x: pos.x, z: pos.z, heading: pos.heading, speed: limit > FAST ? limit * 0.8 : 6, looping: true, colour, kind: lorry ? 'lorry' : 'car' });
+    car.maxSpeed = undefined;
+    car.pace = lorry ? 0.76 : 0.84 + this.rnd() * 0.14;
     car.path = path;
     car.s = s0;
     return car;
+  }
+
+  /** Long maps: add a car on a random path somewhere between rMin and rMax metres from a point. */
+  private spawnNear(p: { x: number; z: number }, rMin: number, rMax: number): void {
+    const paths = (this.layout.aiPaths ?? []).filter((q) => !q.yieldTo);
+    for (let tries = 0; tries < 12; tries++) {
+      const q = paths[Math.floor(this.rnd() * paths.length)];
+      const len = pathLength(q);
+      const s0 = this.rnd() * len;
+      const pos = pointAt(q, s0);
+      const d = Math.hypot(pos.x - p.x, pos.z - p.z);
+      if (d < rMin || d > rMax) continue;
+      if (this.addOnPath(q, s0)) return;
+    }
   }
 
   update(dt: number, player: PlayerShape): void {
@@ -148,6 +180,12 @@ export class Traffic {
       else this.step(c, dt, player);
     }
     this.cars = this.cars.filter((c) => !c.done && (c.looping || this.onRoad(c)));
+    if (this.layout.aiNearPlayer) {
+      // Keep traffic around the player: drop cars far away, add new ones out of sight.
+      this.cars = this.cars.filter((c) => !c.path || Math.hypot(c.x - player.x, c.z - player.z) < 700);
+      if (this.cars.filter((c) => c.path).length < this.target && this.rnd() < dt * 3) this.spawnNear(player, 250, 550);
+      return;
+    }
     // Keep the map populated: new cars appear at the edges.
     if (this.target && this.layout.aiPaths && this.cars.filter((c) => c.path).length < this.target && this.rnd() < dt * 0.8) {
       const spawns = this.layout.aiPaths.filter((p) => p.spawn);
@@ -164,20 +202,22 @@ export class Traffic {
     const fz = Math.cos(c.heading);
     const limit = speedLimitAt(this.layout, c.x, c.z) / MPH_PER_MPS;
     const rb = path.yieldTo ? this.layout.roundabouts?.find((r) => r.id === path.yieldTo) : undefined;
-    c.cruise = Math.min(limit * 0.85, 15, rb ? (rb.mini ? 5 : 7.5) : Infinity);
+    const fast = limit > FAST;
+    c.cruise = Math.min(limit * (c.pace ?? 0.85), fast ? Infinity : 15, rb ? (rb.mini ? 5 : 7.5) : Infinity);
 
     // Gap to whatever is ahead (cars or the player), measured along our own
     // path so it works on curves and roundabouts.
     let gap = Infinity;
+    const look = fast ? Math.max(32, c.speed * 4) : 32;
     for (const o of this.cars) {
-      if (o === c || Math.hypot(o.x - c.x, o.z - c.z) > 32) continue;
-      const d = this.distAlong(c, o.x, o.z, 1.7, 30);
-      if (d < Infinity) gap = Math.min(gap, d - LEN);
+      if (o === c || Math.hypot(o.x - c.x, o.z - c.z) > look + sizeOf(o).len) continue;
+      const d = this.distAlong(c, o.x, o.z, 1.7, look);
+      if (d < Infinity) gap = Math.min(gap, d - (sizeOf(o).len + sizeOf(c).len) / 2);
     }
     for (const [px, pz] of player.corners) {
-      if (Math.hypot(px - c.x, pz - c.z) > 32) continue;
-      const d = this.distAlong(c, px, pz, 1.3, 30);
-      if (d < Infinity) gap = Math.min(gap, d - LEN / 2);
+      if (Math.hypot(px - c.x, pz - c.z) > look) continue;
+      const d = this.distAlong(c, px, pz, 1.3, look);
+      if (d < Infinity) gap = Math.min(gap, d - sizeOf(c).len / 2);
     }
     void fx;
     void fz;
@@ -240,7 +280,10 @@ export class Traffic {
     }
 
     let target = c.cruise;
-    if (gap < 25) target = Math.min(target, Math.max(0, (gap - 2) * 0.8));
+    if (fast) {
+      // Keep about a two-second gap at speed (rule 126).
+      if (gap < 3 + c.cruise * 2.4) target = Math.min(target, Math.max(0, (gap - 3) / 1.9));
+    } else if (gap < 25) target = Math.min(target, Math.max(0, (gap - 2) * 0.8));
     if (gap < 2.5) target = 0;
     // Slow for the roundabout ahead (approach paths end at a give way line).
     const remaining = pathLength(path) - (c.s ?? 0);
@@ -437,8 +480,9 @@ export class Traffic {
       if (c.path) {
         const fx = Math.sin(c.heading);
         const fz = Math.cos(c.heading);
-        const ex = Math.abs(fx) * (LEN / 2) + Math.abs(fz) * (WID / 2);
-        const ez = Math.abs(fz) * (LEN / 2) + Math.abs(fx) * (WID / 2);
+        const { len, wid } = sizeOf(c);
+        const ex = Math.abs(fx) * (len / 2) + Math.abs(fz) * (wid / 2);
+        const ez = Math.abs(fz) * (len / 2) + Math.abs(fx) * (wid / 2);
         return { kind: 'car' as const, x0: c.x - ex * 0.9, x1: c.x + ex * 0.9, z0: c.z - ez * 0.9, z1: c.z + ez * 0.9 };
       }
       const alongX = Math.abs(Math.sin(c.heading)) > 0.7;
