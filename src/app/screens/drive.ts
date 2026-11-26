@@ -1167,8 +1167,11 @@ export function driveScreen(s: LessonSession, mode: DriveMode): Screen {
             const behind = (c: { x: number; z: number; heading: number }) => {
               const dx = c.x - car.x;
               const dz = c.z - car.z;
-              const sameWay = Math.sin(c.heading) * fx + Math.cos(c.heading) * fz > 0.8;
-              return dx * fx + dz * fz < -2 && Math.abs(dx * fz - dz * fx) < 2.5 && sameWay;
+              const cfx = Math.sin(c.heading);
+              const cfz = Math.cos(c.heading);
+              const sameWay = cfx * fx + cfz * fz > 0.7;
+              // Measured in its own frame: we're ahead of it, in its lane (we may be angled at a give way).
+              return dx * fx + dz * fz < -2 && Math.abs(-dx * cfz + dz * cfx) < 2.5 && sameWay;
             };
             const gap = Math.min(...st.waitGap.map(([x, z]) => traffic.timeToReach(x, z, behind)));
             return gap > need ? nextStep() : script.at(0.2, poll);
